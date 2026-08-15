@@ -279,6 +279,9 @@ before `1.0.0`; it is not run from ordinary package tests.
 - Staging smoke test covers URL source, local upload, `wait()`, and webhook verification.
 - Package namespace and repository metadata are verified before publish.
 - MIT licensing and the `ericel/mediaruntime-node-sdk` repository are configured.
+- Pull requests and `main` pass CI on Node.js 20, 22, and 24.
+- Version-matching `v*` tags publish through npm Trusted Publishing; prereleases use
+  `next` and stable versions use `latest`.
 
 ## 15. Implementation snapshot — 2026-08-15
 
@@ -293,7 +296,7 @@ Implemented in this repository:
 - unit coverage for safety-critical retry, upload, timeout, polling, packaging, and
   signature behavior.
 
-Local release checks currently pass: type-check, build, 19 tests, dependency audit, and
+Local release checks currently pass: type-check, build, 22 tests, dependency audit, and
 package dry-run. The remaining gates require external decisions or infrastructure:
 
 - staging conformance/smoke testing with real credentials;
@@ -304,3 +307,6 @@ The first package publication caused npm to assign both `next` and the mandatory
 `latest` tag to `0.1.0-beta.0`; npm rejected removal of the sole `latest` tag. Consumers
 should install `@mediaruntime/node@next` during beta. Publishing stable `0.1.0` will move
 `latest` to the validated release.
+
+CI/CD implementation details and the one-time npm trusted-publisher setup are documented
+in `docs/RELEASING.md`.
