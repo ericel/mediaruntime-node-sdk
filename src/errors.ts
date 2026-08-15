@@ -1,10 +1,21 @@
 import type { JobDetails } from "./types.js";
 
+export interface MediaRuntimeErrorOptions {
+  cause?: unknown;
+}
+
 export class MediaRuntimeError extends Error {
   override readonly name: string = "MediaRuntimeError";
 
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
+  constructor(message: string, options?: MediaRuntimeErrorOptions) {
+    super(message);
+    if (options && "cause" in options) {
+      Object.defineProperty(this, "cause", {
+        configurable: true,
+        value: options.cause,
+        writable: true,
+      });
+    }
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -68,7 +79,7 @@ export class MediaRuntimeTimeoutError extends MediaRuntimeConnectionError {
   override readonly name: string = "MediaRuntimeTimeoutError";
   readonly timeoutMs: number;
 
-  constructor(message: string, timeoutMs: number, options?: ErrorOptions) {
+  constructor(message: string, timeoutMs: number, options?: MediaRuntimeErrorOptions) {
     super(message, options);
     this.timeoutMs = timeoutMs;
   }
@@ -101,7 +112,7 @@ export class WebhookVerificationError extends MediaRuntimeError {
   override readonly name: string = "WebhookVerificationError";
   readonly reason: WebhookVerificationReason;
 
-  constructor(reason: WebhookVerificationReason, message: string, options?: ErrorOptions) {
+  constructor(reason: WebhookVerificationReason, message: string, options?: MediaRuntimeErrorOptions) {
     super(message, options);
     this.reason = reason;
   }
