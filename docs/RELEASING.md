@@ -31,14 +31,15 @@ The workflow rejects a tag that differs from `package.json`. Versions containing
 prerelease suffix, such as `0.1.0-beta.1`, publish under `next`; stable versions publish
 under `latest`.
 
-Example after merging a `0.1.0-beta.1` version bump:
+Example after merging a stable `0.1.0` version bump:
 
 ```bash
 git switch main
 git pull --ff-only
-git tag v0.1.0-beta.1
-git push origin v0.1.0-beta.1
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-The initial `0.1.0-beta.0` package was published manually. All subsequent versions should
-use the workflow so npm records GitHub provenance for the release.
+The beta packages were published manually while the trusted-publisher identity was being
+validated. Stable `0.1.0` and all subsequent versions must use the workflow so npm records
+GitHub provenance for the release.
