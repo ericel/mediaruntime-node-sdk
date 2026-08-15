@@ -92,3 +92,82 @@ test("Express helper rejects an already parsed body", async () => {
   );
   assert.equal(status, 401);
 });
+
+test("Fastify helper verifies request.rawBody before invoking the handler", async () => {
+  const fixture = signedFixture();
+  const media = new MediaRuntime({ webhookSecret: fixture.secret });
+  let handled = false;
+  let status = null;
+  let sent = false;
+  const routeHandler = media.webhooks.fastify(
+    async (event, _request, reply) => {
+      handled = event.jobId === "job_123";
+      reply.code(204).send();
+    },
+    { now: fixture.timestamp },
+  );
+  const reply = {
+    code(value) {
+      status = value;
+      return this;
+    },
+    send() {
+      sent = true;
+    },
+  };
+
+  await routeHandler(
+    { rawBody: fixture.body, body: JSON.parse(fixture.body), headers: fixture.headers },
+    reply,
+  );
+
+  assert.equal(handled, true);
+  assert.equal(status, 204);
+  assert.equal(sent, true);
+});
+
+test("Fastify helper accepts a Buffer body from a scoped content parser", async () => {
+  const fixture = signedFixture();
+  const media = new MediaRuntime({ webhookSecret: fixture.secret });
+  let eventId = null;
+  const routeHandler = media.webhooks.fastify(
+    (event) => {
+      eventId = event.id;
+    },
+    { now: fixture.timestamp },
+  );
+
+  await routeHandler(
+    { body: fixture.body, headers: fixture.headers },
+    { code() { return this; }, send() {} },
+  );
+
+  assert.equal(eventId, "webhook_evt_job_123");
+});
+
+test("Fastify helper rejects an already parsed body", async () => {
+  const fixture = signedFixture();
+  const media = new MediaRuntime({ webhookSecret: fixture.secret });
+  let status = null;
+  let sent = false;
+  const routeHandler = media.webhooks.fastify(() => {
+    throw new Error("must not run");
+  });
+  const reply = {
+    code(value) {
+      status = value;
+      return this;
+    },
+    send() {
+      sent = true;
+    },
+  };
+
+  await routeHandler(
+    { body: JSON.parse(fixture.body), headers: fixture.headers },
+    reply,
+  );
+
+  assert.equal(status, 401);
+  assert.equal(sent, true);
+});

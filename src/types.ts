@@ -383,6 +383,24 @@ export type ExpressWebhookHandler<TPayload extends WebhookPayload = WebhookPaylo
   response: ExpressResponseLike,
 ) => void | Promise<void>;
 
+export interface FastifyRequestLike {
+  body?: unknown;
+  /** Raw bytes supplied by a raw-body plugin; preferred over `body` when present. */
+  rawBody?: unknown;
+  headers: Record<string, HeaderValue>;
+}
+
+export interface FastifyReplyLike {
+  code: (statusCode: number) => FastifyReplyLike;
+  send: (payload?: unknown) => unknown;
+}
+
+export type FastifyWebhookHandler<TPayload extends WebhookPayload = WebhookPayload> = (
+  event: WebhookEvent<TPayload>,
+  request: FastifyRequestLike,
+  reply: FastifyReplyLike,
+) => void | Promise<void>;
+
 export type FetchImplementation = typeof globalThis.fetch;
 
 export interface MediaRuntimeOptions {

@@ -1,6 +1,6 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestones A and B implemented; stable `0.1.0` release approved
+Status: Milestones A and B implemented; stable `0.1.1` includes Express and Fastify adapters
 
 Package: `@mediaruntime/node`
 
@@ -97,7 +97,8 @@ MediaRuntime
 ├── capabilities.retrieve()
 └── webhooks
     ├── verify(rawBody, headers, options)
-    └── express(handler)
+    ├── express(handler)
+    └── fastify(handler)
 ```
 
 `MediaRuntime` reads `MEDIARUNTIME_API_KEY`, `MEDIARUNTIME_API_URL`, and
@@ -201,7 +202,10 @@ Node header record. It:
 6. Parses and returns the typed JSON event only after signature verification.
 
 The Express helper requires `req.body` to be raw bytes. It cannot repair an application
-that registered `express.json()` first, so its error explains that ordering constraint.
+that registered `express.json()` first. The Fastify helper prefers `request.rawBody` from
+a raw-body plugin and falls back to a Buffer supplied by a scoped content-type parser.
+Both helpers reject an already parsed JSON object with `401` and have no framework runtime
+dependency.
 
 ## 10. Packaging and compatibility
 
@@ -269,7 +273,7 @@ before `1.0.0`; it is not run from ordinary package tests.
 ### Milestone C — ergonomic additions
 
 - Accept gateway-resolved output aliases when W4 ships.
-- Framework-specific Fastify helper and richer Express typings.
+- Richer framework-native Express and Fastify typings without mandatory dependencies.
 - Optional async iterators for paginated job listing.
 - OpenTelemetry-compatible hooks without adding a mandatory dependency.
 
@@ -295,7 +299,7 @@ Implemented in this repository:
 - job create/get/list/wait, moderation, media-report, and manual webhook-retry methods;
 - ergonomic `source` mapping plus transparent local and batch-input uploads;
 - capabilities client and watermark-logo upload/confirm workflow;
-- raw-byte webhook verification and dependency-free Express middleware;
+- raw-byte webhook verification and dependency-free Express and Fastify middleware;
 - unit coverage for safety-critical retry, upload, timeout, polling, packaging, and
   signature behavior.
 
@@ -308,7 +312,8 @@ compatibility, dependency audit, and package dry-run. Production validation from
 - output-bundle import and Firestore reconciliation;
 - report-only moderation persistence on processed gallery media.
 
-Stable `0.1.0` is the validated public release. Output aliases remain correctly
+Stable `0.1.1` adds the Fastify adapter without changing the validated API transport.
+Output aliases remain correctly
 independent of SDK 0.1 and can land additively after their gateway contract is frozen.
 
 CI/CD implementation details and the one-time npm trusted-publisher setup are documented
