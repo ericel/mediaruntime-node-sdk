@@ -2,13 +2,13 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-> Status: beta. The local contract suite passes; live staging conformance remains a
-> release gate for the stable `latest` tag.
+> Status: public beta. The local contract suite passes; live staging conformance remains
+> a release gate for stable `0.1.0`.
 
 ## Install
 
 ```bash
-npm install @mediaruntime/node
+npm install @mediaruntime/node@next
 ```
 
 Node.js 20 or newer is required.

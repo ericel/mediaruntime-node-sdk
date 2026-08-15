@@ -1,6 +1,6 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestone A implemented; beta publication prepared
+Status: Milestone A implemented; `0.1.0-beta.0` published
 
 Package: `@mediaruntime/node`
 
@@ -297,5 +297,10 @@ Local release checks currently pass: type-check, build, 19 tests, dependency aud
 package dry-run. The remaining gates require external decisions or infrastructure:
 
 - staging conformance/smoke testing with real credentials;
-- stable `latest` publication after beta validation;
+- stable `0.1.0` publication after beta validation;
 - output aliases, which remain correctly independent of SDK 0.1.
+
+The first package publication caused npm to assign both `next` and the mandatory initial
+`latest` tag to `0.1.0-beta.0`; npm rejected removal of the sole `latest` tag. Consumers
+should install `@mediaruntime/node@next` during beta. Publishing stable `0.1.0` will move
+`latest` to the validated release.
