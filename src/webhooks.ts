@@ -5,6 +5,9 @@ import type {
   ExpressRequestLike,
   ExpressResponseLike,
   ExpressWebhookHandler,
+  FastifyReplyLike,
+  FastifyRequestLike,
+  FastifyWebhookHandler,
   HeaderValue,
   VerifyWebhookOptions,
   WebhookEvent,
@@ -184,6 +187,33 @@ export class WebhooksClient {
         }
         if (next) next(error);
         else throw error;
+      }
+    };
+  }
+
+  fastify<TPayload extends WebhookPayload = WebhookPayload>(
+    handler: FastifyWebhookHandler<TPayload>,
+    options: VerifyWebhookOptions = {},
+  ): (request: FastifyRequestLike, reply: FastifyReplyLike) => Promise<void> {
+    return async (request, reply) => {
+      const rawBody = request.rawBody ?? request.body;
+      if (
+        !Buffer.isBuffer(rawBody) &&
+        !(rawBody instanceof Uint8Array) &&
+        typeof rawBody !== "string"
+      ) {
+        reply.code(401).send();
+        return;
+      }
+      try {
+        const event = this.verify<TPayload>(rawBody, request.headers, options);
+        await handler(event, request, reply);
+      } catch (error) {
+        if (error instanceof WebhookVerificationError) {
+          reply.code(401).send();
+          return;
+        }
+        throw error;
       }
     };
   }

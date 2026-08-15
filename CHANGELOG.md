@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-08-15
+
+- Added dependency-free Fastify webhook middleware with raw-body verification.
+- Documented a scoped Fastify content parser that leaves normal JSON routes unchanged.
+- Added Fastify raw-body, parsed-body rejection, and consumer type-compatibility tests.
+
 ## 0.1.0 — 2026-08-15
 
 First stable release of the official MediaRuntime Node.js SDK.

@@ -4,7 +4,7 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable. Version `0.1.0` is validated against the production API from a Node.js 22
+Status: stable. Version `0.1.1` is validated against the production API from a Node.js 22
 Firebase Functions consumer, including job submission, terminal webhook verification,
 artifact reconciliation, and moderation persistence.
 
@@ -97,6 +97,36 @@ app.post(
 
 Register the raw-body route before `express.json()`. Webhook verification cannot use a
 JSON object that has already been parsed and reserialized.
+
+Fastify can keep the raw parser scoped to the webhook route, so normal JSON routes are
+unchanged:
+
+```ts
+import Fastify from "fastify";
+import { MediaRuntime } from "@mediaruntime/node";
+
+const media = new MediaRuntime();
+const app = Fastify();
+
+await app.register(async (webhookRoutes) => {
+  webhookRoutes.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (_request, body, done) => done(null, body),
+  );
+  webhookRoutes.post(
+    "/webhooks/mediaruntime",
+    media.webhooks.fastify(async (event, _request, reply) => {
+      // Persist and deduplicate event.id before acknowledging.
+      console.log(event.id, event.jobId, event.status);
+      reply.code(204).send();
+    }),
+  );
+});
+```
+
+If your application already uses a raw-body plugin, the adapter prefers
+`request.rawBody` and falls back to a Buffer in `request.body`. Parsed JSON fails closed.
 
 ## Configuration
 
