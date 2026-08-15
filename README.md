@@ -4,13 +4,14 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-> Status: public beta. The local contract suite passes; live staging conformance remains
-> a release gate for stable `0.1.0`.
+Status: stable. Version `0.1.0` is validated against the production API from a Node.js 22
+Firebase Functions consumer, including job submission, terminal webhook verification,
+artifact reconciliation, and moderation persistence.
 
 ## Install
 
 ```bash
-npm install @mediaruntime/node@next
+npm install @mediaruntime/node
 ```
 
 Node.js 20 or newer is required.
@@ -42,6 +43,38 @@ HTTP(S) and `gs://` sources are submitted directly. Other strings and `file://` 
 treated as local files and transparently uploaded through MediaRuntime's signed-upload
 flow.
 
+The production API URL is built in. Do not ask application users to configure it.
+`baseUrl` is an optional override for local gateways, staging environments, and mock
+servers:
+
+```ts
+const localMedia = new MediaRuntime({
+  apiKey: process.env.MEDIARUNTIME_API_KEY,
+  baseUrl: "http://localhost:8001",
+});
+```
+
+## Moderation
+
+Enable report-only moderation when creating a visual-media job, then retrieve its typed
+result after completion:
+
+```ts
+const job = await media.jobs.create({
+  source: "https://cdn.example.com/photo.jpg",
+  outputs: [{ type: "image", preset: "image_multi_v1" }],
+  moderation: {
+    enabled: true,
+    mode: "report",
+    checks: ["sexual", "violence", "dangerous"],
+  },
+});
+
+const result = await job.wait();
+const moderation = await media.jobs.getModeration(result.id);
+console.log(moderation.verdict, moderation.flaggedChecks);
+```
+
 ## Verify webhooks
 
 ```ts
@@ -72,7 +105,7 @@ Constructor options override environment variables:
 | Option | Environment variable | Default |
 |---|---|---|
 | `apiKey` | `MEDIARUNTIME_API_KEY` | required for authenticated calls |
-| `baseUrl` | `MEDIARUNTIME_API_URL` | `https://mediaruntime.com` |
+| `baseUrl` | `MEDIARUNTIME_API_URL` | `https://mediaruntime.com` (normally leave unset) |
 | `webhookSecret` | `MEDIARUNTIME_WEBHOOK_SECRET` | required for webhook verification |
 | `timeoutMs` | — | `30000` |
 | `maxRetries` | — | `2` |

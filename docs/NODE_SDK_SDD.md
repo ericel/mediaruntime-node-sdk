@@ -1,10 +1,10 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestone A implemented; `0.1.0-beta.0` published
+Status: Milestones A and B implemented; stable `0.1.0` release approved
 
 Package: `@mediaruntime/node`
 
-Repository: `mediaruntime-sdk`
+Repository: `ericel/mediaruntime-node-sdk`
 Runtime: Node.js 20+
 
 ## 1. Purpose
@@ -101,8 +101,11 @@ MediaRuntime
 ```
 
 `MediaRuntime` reads `MEDIARUNTIME_API_KEY`, `MEDIARUNTIME_API_URL`, and
-`MEDIARUNTIME_WEBHOOK_SECRET` when explicit options are absent. Constructor injection of
-`fetch` is supported for tests, controlled proxies, and instrumentation.
+`MEDIARUNTIME_WEBHOOK_SECRET` when explicit options are absent. Production consumers
+normally supply only the API key: the hosted base URL defaults to
+`https://mediaruntime.com`. `baseUrl`/`MEDIARUNTIME_API_URL` are overrides for local,
+staging, proxy, and test environments—not required customer configuration. Constructor
+injection of `fetch` is supported for tests, controlled proxies, and instrumentation.
 
 `jobs.create()` returns a `Job` receipt containing `id`, `status`, `tier`, `message`,
 `refresh()`, and `wait()`. Detailed reads and list pages are plain typed data structures.
@@ -296,17 +299,17 @@ Implemented in this repository:
 - unit coverage for safety-critical retry, upload, timeout, polling, packaging, and
   signature behavior.
 
-Local release checks currently pass: type-check, build, 22 tests, dependency audit, and
-package dry-run. The remaining gates require external decisions or infrastructure:
+Local release checks currently pass: type-check, build, 22 tests, ES2017 consumer type
+compatibility, dependency audit, and package dry-run. Production validation from
+`wahalao-functions` covers:
 
-- staging conformance/smoke testing with real credentials;
-- stable `0.1.0` publication after beta validation;
-- output aliases, which remain correctly independent of SDK 0.1.
+- authenticated job submission through `POST /v1/jobs`;
+- terminal raw-body webhook signature and timestamp verification;
+- output-bundle import and Firestore reconciliation;
+- report-only moderation persistence on processed gallery media.
 
-The first package publication caused npm to assign both `next` and the mandatory initial
-`latest` tag to `0.1.0-beta.0`; npm rejected removal of the sole `latest` tag. Consumers
-should install `@mediaruntime/node@next` during beta. Publishing stable `0.1.0` will move
-`latest` to the validated release.
+Stable `0.1.0` is the validated public release. Output aliases remain correctly
+independent of SDK 0.1 and can land additively after their gateway contract is frozen.
 
 CI/CD implementation details and the one-time npm trusted-publisher setup are documented
 in `docs/RELEASING.md`.
