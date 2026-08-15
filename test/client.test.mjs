@@ -101,6 +101,37 @@ test("maps ergonomic create input to the current gateway contract without changi
   });
 });
 
+test("forwards frozen output aliases for gateway-side resolution", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({
+        job_id: "job_alias",
+        status: "queued",
+        tier: "standard",
+        required_tier: "standard",
+        outputs: [
+          { alias: "video.web", type: "mp4", preset: "mp4_720p_h264_aac" },
+          { alias: "audio.transcription", type: "audio", preset: "audio_aac_128k" },
+        ],
+        msg: "accepted",
+      });
+    },
+  });
+
+  const job = await media.jobs.create({
+    source: "https://cdn.example.test/video.mp4",
+    outputs: ["video.web", "audio.transcription"],
+  });
+
+  assert.equal(job.id, "job_alias");
+  assert.equal(job.requiredTier, "standard");
+  assert.equal(job.outputs[0].preset, "mp4_720p_h264_aac");
+  assert.deepEqual(captured.outputs, ["video.web", "audio.transcription"]);
+});
+
 test("does not retry an ambiguous unkeyed job submission", async () => {
   let calls = 0;
   const media = new MediaRuntime({
@@ -232,12 +263,22 @@ test("capabilities are available without an API key and safe reads retry", async
         capabilities: { visual: "a video or image stream" },
         output_types: { mp4: ["timeline", "visual"] },
         preset_overrides: {},
+        output_aliases: {
+          "video.web": {
+            type: "mp4",
+            preset: "mp4_720p_h264_aac",
+            tier: "standard",
+            artifacts: ["720p MP4"],
+            output: { type: "mp4", preset: "mp4_720p_h264_aac" },
+          },
+        },
         notes: [],
       });
     },
   });
   const result = await media.capabilities.retrieve();
   assert.deepEqual(result.outputTypes.mp4, ["timeline", "visual"]);
+  assert.equal(result.outputAliases["video.web"].preset, "mp4_720p_h264_aac");
   assert.equal(calls, 2);
 });
 

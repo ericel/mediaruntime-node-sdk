@@ -4,7 +4,7 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable. Version `0.1.1` is validated against the production API from a Node.js 22
+Status: stable. Version `0.2.0` is validated against the production API from a Node.js 22
 Firebase Functions consumer, including job submission, terminal webhook verification,
 artifact reconciliation, and moderation persistence.
 
@@ -27,7 +27,7 @@ const media = new MediaRuntime({
 
 const job = await media.jobs.create({
   source: "./video.mp4",
-  outputs: [{ type: "mp4", preset: "mp4_720p_h264_aac" }],
+  outputs: ["video.web"],
   metadata: { video_id: "vid_123" },
   idempotencyKey: "video:vid_123:v1",
 });
@@ -42,6 +42,11 @@ console.log(result.status, result.bundle.downloadUrl);
 HTTP(S) and `gs://` sources are submitted directly. Other strings and `file://` URLs are
 treated as local files and transparently uploaded through MediaRuntime's signed-upload
 flow.
+
+Aliases are frozen gateway contracts: `video.web`, `video.streaming`, `video.social`,
+`audio.web`, `audio.transcription`, and `image.web`. The gateway materializes them before
+validation, estimation, billing, and persistence. Explicit `{ type, preset, ... }` output
+objects remain supported and may be mixed with aliases.
 
 The production API URL is built in. Do not ask application users to configure it.
 `baseUrl` is an optional override for local gateways, staging environments, and mock

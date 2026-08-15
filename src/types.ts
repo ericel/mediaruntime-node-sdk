@@ -3,6 +3,13 @@ export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue
 export type Metadata = Record<string, JsonValue>;
 
 export type OutputType = "mp4" | "hls" | "audio" | "image" | "social" | "gif" | "frames";
+export type OutputAlias =
+  | "video.web"
+  | "video.streaming"
+  | "video.social"
+  | "audio.web"
+  | "audio.transcription"
+  | "image.web";
 export type ImageFormat = "jpg" | "png" | "webp" | "avif";
 export type SubtitleFormat = "srt" | "vtt" | "both";
 export type ModerationMode = "report" | "block";
@@ -102,7 +109,8 @@ export interface WatermarkOptions {
 }
 
 interface CreateJobCommon {
-  outputs?: JobOutput[];
+  /** Frozen gateway aliases and explicit output recipes may be mixed in one job. */
+  outputs?: Array<JobOutput | OutputAlias>;
   webhookUrl?: string;
   metadata?: Metadata;
   moderation?: ModerationOptions;
@@ -134,6 +142,12 @@ export interface JobReceiptData {
   id: string;
   status: JobStatus;
   tier: string;
+  requiredTier: string | null;
+  outputs: Array<{
+    alias: string | null;
+    type: OutputType;
+    preset: string;
+  }>;
   message: string;
 }
 
@@ -327,6 +341,16 @@ export interface Capabilities {
   capabilities: Record<string, string>;
   outputTypes: Record<string, string[]>;
   presetOverrides: Record<string, string[]>;
+  outputAliases: Record<
+    string,
+    {
+      type: OutputType;
+      preset: string;
+      tier: "standard" | "premium";
+      artifacts: string[];
+      output: Record<string, unknown>;
+    }
+  >;
   notes: string[];
 }
 

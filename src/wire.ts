@@ -10,6 +10,7 @@ import type {
   JobMedia,
   JobMediaAudio,
   JobMediaVideo,
+  OutputAlias,
   JobOutput,
   JobPage,
   JobReceiptData,
@@ -123,7 +124,8 @@ function serializeImage(value: ImageRendition): UnknownRecord {
   return output;
 }
 
-function serializeOutput(value: JobOutput): UnknownRecord {
+function serializeOutput(value: JobOutput | OutputAlias): UnknownRecord | OutputAlias {
+  if (typeof value === "string") return value;
   const output: UnknownRecord = { type: value.type };
   setDefined(output, "preset", value.preset);
   setDefined(output, "path_suffix", value.pathSuffix);
@@ -178,10 +180,22 @@ function status(value: unknown): JobStatus {
 
 export function parseJobReceipt(value: unknown): JobReceiptData {
   const data = record(value);
+  const outputs = Array.isArray(data.outputs)
+    ? data.outputs.map((item) => {
+      const output = record(item);
+      return {
+        alias: stringOrNull(output.alias),
+        type: String(output.type ?? "") as JobReceiptData["outputs"][number]["type"],
+        preset: String(output.preset ?? ""),
+      };
+    })
+    : [];
   return {
     id: String(data.job_id ?? ""),
     status: status(data.status),
     tier: String(data.tier ?? ""),
+    requiredTier: stringOrNull(data.required_tier),
+    outputs,
     message: String(data.msg ?? ""),
   };
 }
@@ -396,10 +410,23 @@ export function parseCapabilities(value: unknown): Capabilities {
         (entry): entry is [string, string] => typeof entry[1] === "string",
       ),
     );
+  const outputAliases = Object.fromEntries(
+    Object.entries(record(data.output_aliases)).map(([alias, item]) => {
+      const spec = record(item);
+      return [alias, {
+        type: String(spec.type ?? "") as Capabilities["outputAliases"][string]["type"],
+        preset: String(spec.preset ?? ""),
+        tier: String(spec.tier ?? "standard") as Capabilities["outputAliases"][string]["tier"],
+        artifacts: stringArray(spec.artifacts),
+        output: record(spec.output),
+      }];
+    }),
+  );
   return {
     capabilities: stringRecord(data.capabilities),
     outputTypes: arrayRecord(data.output_types),
     presetOverrides: arrayRecord(data.preset_overrides),
+    outputAliases,
     notes: stringArray(data.notes),
   };
 }

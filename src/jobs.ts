@@ -95,6 +95,8 @@ export class Job {
   readonly id: string;
   readonly status: JobReceiptData["status"];
   readonly tier: string;
+  readonly requiredTier: string | null;
+  readonly outputs: JobReceiptData["outputs"];
   readonly message: string;
 
   constructor(data: JobReceiptData, jobs: JobsClient) {
@@ -102,6 +104,8 @@ export class Job {
     this.id = data.id;
     this.status = data.status;
     this.tier = data.tier;
+    this.requiredTier = data.requiredTier;
+    this.outputs = data.outputs;
     this.message = data.message;
   }
 
@@ -114,7 +118,14 @@ export class Job {
   }
 
   toJSON(): JobReceiptData {
-    return { id: this.id, status: this.status, tier: this.tier, message: this.message };
+    return {
+      id: this.id,
+      status: this.status,
+      tier: this.tier,
+      requiredTier: this.requiredTier,
+      outputs: this.outputs,
+      message: this.message,
+    };
   }
 }
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 — 2026-08-16
+
+- Added typed support for the six frozen output aliases.
+- Exposed gateway-resolved output tuples and the required tier on job receipts.
+- Exposed the live output-alias catalog through capabilities.
+
 ## 0.1.1 — 2026-08-15
 
 - Added dependency-free Fastify webhook middleware with raw-body verification.
