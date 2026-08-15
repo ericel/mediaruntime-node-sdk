@@ -1,6 +1,6 @@
 {
   "name": "@mediaruntime/node",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0-beta.1",
   "description": "Official Node.js SDK for the MediaRuntime API",
   "license": "MIT",
   "type": "module",
@@ -26,8 +26,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean",
     "check": "tsc --noEmit",
+    "check:consumer": "tsc -p test/consumer/tsconfig.json",
     "pretest": "npm run build",
-    "test": "node --test test/*.test.mjs",
+    "test": "node --test test/*.test.mjs && npm run check:consumer",
     "prepack": "npm run check && npm test"
   },
   "devDependencies": {

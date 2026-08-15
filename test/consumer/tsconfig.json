@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2017", "DOM"],
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "noEmit": true,
+    "skipLibCheck": false,
+    "strict": true,
+    "target": "ES2017"
+  },
+  "include": ["es2017.ts"]
+}
