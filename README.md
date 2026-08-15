@@ -1,14 +1,16 @@
 # `@mediaruntime/node`
 
+[![CI](https://github.com/ericel/mediaruntime-node-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/ericel/mediaruntime-node-sdk/actions/workflows/ci.yml)
+
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-> Status: initial implementation. Do not publish this package until the npm namespace,
-> repository URL, and staging conformance checks in the SDD are complete.
+> Status: public beta. The local contract suite passes; live staging conformance remains
+> a release gate for stable `0.1.0`.
 
 ## Install
 
 ```bash
-npm install @mediaruntime/node
+npm install @mediaruntime/node@next
 ```
 
 Node.js 20 or newer is required.
@@ -77,3 +79,6 @@ Constructor options override environment variables:
 
 See [the software design document](./docs/NODE_SDK_SDD.md) for the API boundaries,
 security model, retry semantics, milestones, and release gates.
+
+Maintainers should follow [the release runbook](./docs/RELEASING.md) for automated npm
+publishing through GitHub Actions.
