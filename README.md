@@ -2,8 +2,8 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-> Status: initial implementation. Do not publish this package until the npm namespace,
-> repository URL, and staging conformance checks in the SDD are complete.
+> Status: beta. The local contract suite passes; live staging conformance remains a
+> release gate for the stable `latest` tag.
 
 ## Install
 

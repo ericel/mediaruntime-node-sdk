@@ -1,0 +1,59 @@
+{
+  "name": "@mediaruntime/node",
+  "version": "0.1.0-beta.0",
+  "description": "Official Node.js SDK for the MediaRuntime API",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean",
+    "check": "tsc --noEmit",
+    "pretest": "npm run build",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run check && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "esbuild": "^0.28.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ericel/mediaruntime-node-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ericel/mediaruntime-node-sdk/issues"
+  },
+  "homepage": "https://github.com/ericel/mediaruntime-node-sdk#readme",
+  "keywords": [
+    "mediaruntime",
+    "transcoding",
+    "video",
+    "audio",
+    "image"
+  ]
+}
