@@ -205,8 +205,9 @@ publishing through GitHub Actions.
 This repository validates the SDK against versioned fixtures derived from MediaRuntime's
 public API contract. The suite covers canonical source serialization, supported output
 aliases, terminal job states, normalized errors, request correlation, and the shared
-bundle metadata exposed through polling and terminal webhooks. These development fixtures
-are not included in the published npm package.
+bundle metadata exposed through polling and terminal webhooks. They also pin representative
+multi-result and HLS ZIP trees plus owner-scoped, expiring bundle redemption. These
+development fixtures are not included in the published npm package.
 
 Maintainer synchronization instructions live in
 [Contract maintenance](./docs/CONTRACT_MAINTENANCE.md).

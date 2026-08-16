@@ -265,3 +265,34 @@ test("polling and verified webhook projections preserve declared bundle parity",
   assert.equal(event.data.delivery.bundle.type, contract.delivery_contract.bundle.archive_type);
   assert.notEqual(polled.bundle.downloadUrl, event.data.delivery.bundle.download.url);
 });
+
+test("pins representative ZIP trees and owner-scoped redemption semantics", () => {
+  const delivery = contract.delivery_contract;
+  assert.equal(contract.schema_version, "1.2.0");
+  assert.deepEqual(
+    delivery.bundle_tree_cases.map((fixture) => fixture.name),
+    [
+      "video_poster_subtitles",
+      "multi_rendition",
+      "image_derivatives",
+      "transcription",
+      "media_report",
+      "hls_tree",
+    ],
+  );
+  assert.ok(
+    delivery.bundle_tree_cases
+      .find((fixture) => fixture.name === "hls_tree")
+      .output_roots.streaming.includes("master.m3u8"),
+  );
+  assert.deepEqual(delivery.redemption.required_token_claims, [
+    "account_id",
+    "job_id",
+    "type",
+    "exp",
+  ]);
+  assert.equal(delivery.redemption.scope, "bundle");
+  assert.equal(delivery.redemption.cross_account_result, 404);
+  assert.equal(delivery.redemption.expired_result, 410);
+  assert.equal(delivery.redemption.missing_exp_result, 401);
+});
