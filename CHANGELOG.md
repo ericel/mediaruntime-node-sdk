@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 — 2026-08-16
+
+- Declare the documented SDK surface stable under semantic versioning.
+- Require supported Node.js 22 or newer runtimes.
+- Freeze canonical source serialization, output aliases, terminal states, typed errors,
+  invocation-safe retries, and polling/webhook ZIP-bundle semantics as the v1 contract.
+- Correct the public idempotency documentation to distinguish invocation-generated keys
+  from caller-provided durable business keys.
+
 ## 0.2.5 — 2026-08-16
 
 - Generate one opaque idempotency key per `jobs.create()` invocation when the caller
