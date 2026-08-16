@@ -200,24 +200,13 @@ security model, retry semantics, milestones, and release gates.
 Maintainers should follow [the release runbook](./docs/RELEASING.md) for automated npm
 publishing through GitHub Actions.
 
-## Gateway contract conformance
+## Contract conformance
 
-The repository keeps a versioned snapshot of the gateway's public OpenAPI document and
-cross-client conformance fixture under `contracts/v1/`. Tests consume that snapshot to
-pin canonical source serialization, all six output aliases, terminal states, current
-error envelopes, and polling/webhook bundle parity. These maintenance files are not
-included in the published npm package.
+This repository validates the SDK against versioned fixtures derived from MediaRuntime's
+public API contract. The suite covers canonical source serialization, supported output
+aliases, terminal job states, normalized errors, request correlation, and the shared
+bundle metadata exposed through polling and terminal webhooks. These development fixtures
+are not included in the published npm package.
 
-After the gateway contract changes, sync the exact canonical artifacts from a local
-gateway checkout and run the full suite:
-
-```bash
-npm run contracts:sync -- --source /path/to/transcoder-gateway-api/contracts
-npm run contracts:check -- --source /path/to/transcoder-gateway-api/contracts
-npm test
-```
-
-`contracts/provenance.json` records the upstream repository and SHA-256 digest of each
-copied artifact. Normal CI validates the checked-in digests without depending on a
-sibling repository; the optional `--source` check proves byte-for-byte parity during a
-coordinated cross-repository update.
+Maintainer synchronization instructions live in
+[Contract maintenance](./docs/CONTRACT_MAINTENANCE.md).

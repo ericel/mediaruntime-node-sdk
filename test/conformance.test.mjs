@@ -59,6 +59,8 @@ test("checked-in OpenAPI advertises the canonical source spelling", () => {
   const schemas = openapi.components.schemas;
   assert.ok(schemas.CreateJobRequest.properties.source);
   assert.ok(schemas.JobInput.properties.source);
+  assert.equal(Object.keys(openapi.paths).some((path) => path.startsWith("/v1/internal/")), false);
+  assert.equal(Object.keys(schemas).some((name) => name.startsWith("Internal")), false);
   assert.equal(contract.compatibility.canonical_source_field, "source");
   assert.equal(contract.compatibility.accepted_legacy_source_field, "file_url");
 });

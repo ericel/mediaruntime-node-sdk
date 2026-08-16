@@ -51,8 +51,7 @@ async function createManifest() {
   return {
     manifest_version: 1,
     source: {
-      repository: "https://github.com/ericel/transcoder-gateway-api",
-      ref: "main",
+      identifier: "mediaruntime-public-api",
       artifact_root: "contracts",
     },
     artifacts: entries,

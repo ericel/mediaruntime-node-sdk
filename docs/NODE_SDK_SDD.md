@@ -1,6 +1,6 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestones A and B implemented and published as stable `0.2.3`
+Status: Milestones A and B implemented and published as stable `0.2.4`
 
 Package: `@mediaruntime/node`
 
@@ -62,17 +62,17 @@ const result = await job.wait({ timeoutMs: 300_000 });
 
 The current gateway implementation is authoritative:
 
-- `transcoder-gateway-api/models/schemas.py` defines job and upload request/response shapes.
-- `transcoder-gateway-api/routes/routes.py` defines the public `/v1` endpoint behavior.
-- `transcoder-gateway-api/services/webhook.py` defines webhook signing.
+- The upstream gateway schemas define job and upload request/response shapes.
+- The upstream gateway routes define the public `/v1` endpoint behavior.
+- The upstream gateway webhook service defines webhook signing.
 - `GET /v1/capabilities` is the runtime source of compatibility rules and output aliases.
 
 The gateway's canonical public input is `source` at both scalar and batch-item scope.
 It still accepts `file_url` as a legacy compatibility spelling, but official SDKs emit
 only `source`.
 
-Versioned snapshots of the gateway OpenAPI document and cross-client conformance fixture
-live under `contracts/v1/`. The gateway remains authoritative; the snapshot lets normal
+Versioned snapshots of the filtered public OpenAPI document and cross-client conformance
+fixture live under `contracts/v1/`. The gateway remains authoritative; the snapshot lets normal
 SDK CI validate its wire surface without importing a sibling checkout. Maintainers use
 `scripts/contracts.mjs` for an explicit byte-for-byte sync/check during coordinated API
 changes.
@@ -256,8 +256,8 @@ required. Required coverage:
 - local upload header preservation and opaque URI submission;
 - polling completion and timeout;
 - all gateway-declared single and batch terminal states, including `PARTIAL` batches;
-- canonical scalar/batch source, all frozen aliases, current error envelopes, and
-  polling/webhook bundle parity from the checked-in gateway conformance fixture;
+- canonical scalar/batch source, all frozen aliases, current error envelopes, and shared
+  polling/webhook bundle metadata from the checked-in conformance fixture;
 - webhook success, invalid signature, stale timestamp, and raw-body sensitivity;
 - ESM and CommonJS package loading after build.
 
@@ -279,7 +279,7 @@ before `1.0.0`; it is not run from ordinary package tests.
 
 ### Milestone B — contract hardening (implemented)
 
-- Check in the gateway's machine-readable OpenAPI v1 schema with provenance hashes.
+- Check in the filtered public OpenAPI v1 schema with provenance hashes.
 - Add shared conformance fixtures between gateway and SDK.
 - Exercise the fixture in ordinary CI without a runtime dependency on the gateway repo.
 

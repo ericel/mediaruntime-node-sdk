@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4 — 2026-08-16
+
+- Vendor only the filtered public OpenAPI surface in repository conformance fixtures.
+- Keep private upstream repository naming out of public provenance and consumer docs.
+
 ## 0.2.3 — 2026-08-16
 
 - Surface gateway-owned `code`, `retryable`, and `requestId` fields on API errors.
