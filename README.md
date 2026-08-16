@@ -16,7 +16,7 @@ npm install @mediaruntime/node
 
 Node.js 20 or newer is required.
 
-## Submit and wait
+## Submit, wait, and get the bundle
 
 ```ts
 import { MediaRuntime } from "@mediaruntime/node";
@@ -34,10 +34,23 @@ const job = await media.jobs.create({
 
 console.log(job.id);
 
-// Useful for scripts and tests. Prefer signed webhooks in production.
+// Polling is convenient for scripts, tests, and first-run verification.
 const result = await job.wait({ timeoutMs: 300_000 });
-console.log(result.status, result.bundle.downloadUrl);
+if (result.status !== "COMPLETED" || !result.bundle.downloadUrl) {
+  throw new Error(`MediaRuntime job ended with ${result.status}`);
+}
+console.log(result.bundle.downloadUrl);
 ```
+
+`result.bundle.downloadUrl` is a short-lived URL for the canonical ZIP containing every
+requested deliverable. One job can place a video, poster, subtitles, multiple renditions,
+or a complete HLS directory tree in that bundle; the SDK does not model those files as
+separate delivery URLs.
+
+In production, persist `job.id` and complete the workflow from the signed terminal
+webhook sent to the destination configured under Account → Webhooks. Redeem
+`delivery.bundle.download.url` from that event for the same ZIP. A job submission does
+not supply or override the webhook URL.
 
 HTTP(S) and `gs://` sources are submitted directly. Other strings and `file://` URLs are
 treated as local files and transparently uploaded through MediaRuntime's signed-upload
