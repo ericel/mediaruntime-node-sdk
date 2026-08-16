@@ -1,6 +1,6 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestones A and B implemented; stable `0.1.1` includes Express and Fastify adapters
+Status: Milestones A and B implemented; stable `0.2.0` includes frozen output aliases
 
 Package: `@mediaruntime/node`
 
@@ -22,7 +22,7 @@ import { MediaRuntime } from "@mediaruntime/node";
 const media = new MediaRuntime();
 const job = await media.jobs.create({
   source: "./video.mp4",
-  outputs: [{ type: "mp4", preset: "mp4_720p_h264_aac" }],
+  outputs: ["video.web"],
   idempotencyKey: "video:vid_123:v1",
 });
 
@@ -48,10 +48,10 @@ const result = await job.wait({ timeoutMs: 300_000 });
 - Ship types, ESM, and CommonJS from one package with no runtime dependencies.
 - Keep gateway wire names private where practical and expose JavaScript-style camelCase.
 
-### Non-goals for 0.1
+### Non-goals for 0.x
 
-- Output aliases and hosted recipes. The SDK will accept them additively once the gateway
-  publishes them, but will not maintain a client-only alias table that can drift.
+- Client-owned output alias resolution or hosted recipes. The SDK forwards typed alias
+  strings unchanged; the gateway owns materialization and publishes the live catalog.
 - Local webhook relay, CLI commands, or synthetic event delivery.
 - Automatic webhook `event_id` deduplication; that requires the customer's datastore.
 - Browser support. The package uses Node filesystem and cryptography APIs.
@@ -65,7 +65,7 @@ The current gateway implementation is authoritative:
 - `transcoder-gateway-api/models/schemas.py` defines job and upload request/response shapes.
 - `transcoder-gateway-api/routes/routes.py` defines the public `/v1` endpoint behavior.
 - `transcoder-gateway-api/services/webhook.py` defines webhook signing.
-- `GET /v1/capabilities` is the runtime source of compatibility rules.
+- `GET /v1/capabilities` is the runtime source of compatibility rules and output aliases.
 
 The gateway currently accepts `file_url`, not `source`. The SDK exposes `source` and maps
 it to `file_url`; this is a client projection, not a dependency on the proposed gateway
@@ -272,7 +272,7 @@ before `1.0.0`; it is not run from ordinary package tests.
 
 ### Milestone C — ergonomic additions
 
-- Accept gateway-resolved output aliases when W4 ships.
+- [x] Accept frozen output aliases and project the gateway-resolved outputs and tier.
 - Richer framework-native Express and Fastify typings without mandatory dependencies.
 - Optional async iterators for paginated job listing.
 - OpenTelemetry-compatible hooks without adding a mandatory dependency.
@@ -290,7 +290,7 @@ before `1.0.0`; it is not run from ordinary package tests.
 - Version-matching `v*` tags publish through npm Trusted Publishing; prereleases use
   `next` and stable versions use `latest`.
 
-## 15. Implementation snapshot — 2026-08-15
+## 15. Implementation snapshot — 2026-08-16
 
 Implemented in this repository:
 
@@ -299,11 +299,12 @@ Implemented in this repository:
 - job create/get/list/wait, moderation, media-report, and manual webhook-retry methods;
 - ergonomic `source` mapping plus transparent local and batch-input uploads;
 - capabilities client and watermark-logo upload/confirm workflow;
+- typed frozen aliases, gateway-resolved output receipts, and capabilities discovery;
 - raw-byte webhook verification and dependency-free Express and Fastify middleware;
 - unit coverage for safety-critical retry, upload, timeout, polling, packaging, and
   signature behavior.
 
-Local release checks currently pass: type-check, build, 22 tests, ES2017 consumer type
+Local release checks currently pass: type-check, build, 26 tests, ES2017 consumer type
 compatibility, dependency audit, and package dry-run. Production validation from
 `wahalao-functions` covers:
 
@@ -312,9 +313,9 @@ compatibility, dependency audit, and package dry-run. Production validation from
 - output-bundle import and Firestore reconciliation;
 - report-only moderation persistence on processed gallery media.
 
-Stable `0.1.1` adds the Fastify adapter without changing the validated API transport.
-Output aliases remain correctly
-independent of SDK 0.1 and can land additively after their gateway contract is frozen.
+Stable `0.2.0` adds the six frozen aliases without moving resolution or billing policy
+into the client. Alias strings are forwarded unchanged, and explicit output objects remain
+fully supported.
 
 CI/CD implementation details and the one-time npm trusted-publisher setup are documented
 in `docs/RELEASING.md`.
