@@ -42,6 +42,12 @@ if (result.status !== "COMPLETED" || !result.bundle.downloadUrl) {
 console.log(result.bundle.downloadUrl);
 ```
 
+Every `jobs.create()` call carries an idempotency key. If you omit `idempotencyKey`, the
+SDK generates an opaque key for that invocation and reuses it only for automatic retries
+inside the same live call. That protects against a response being lost after acceptance.
+It does not survive a restart, queue redelivery, or a later `create()` call. Supply a
+stable business key, as shown above, whenever those attempts must resolve to one job.
+
 `result.bundle.downloadUrl` is a short-lived URL for the canonical ZIP containing every
 requested deliverable. One job can place a video, poster, subtitles, multiple renditions,
 or a complete HLS directory tree in that bundle; the SDK does not model those files as
@@ -179,8 +185,9 @@ try {
 ```
 
 `responseBody` retains the complete compatibility response. Treat `retryable` as a
-transport classification: retrying an ambiguous job submission is safe only when the
-original call used an `Idempotency-Key`.
+transport classification. The SDK makes retries inside one `jobs.create()` invocation
+safe with one generated or caller-provided key; only a caller-provided business key can
+deduplicate a later invocation.
 
 ## Configuration
 

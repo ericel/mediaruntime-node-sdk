@@ -1,6 +1,6 @@
 {
   "name": "@mediaruntime/node",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Official Node.js SDK for the MediaRuntime API",
   "license": "MIT",
   "type": "module",

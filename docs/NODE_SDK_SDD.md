@@ -38,8 +38,9 @@ const result = await job.wait({ timeoutMs: 300_000 });
   returned by the status endpoint.
 - Accept HTTP(S), `gs://`, and local-file sources. Local files use the signed-upload flow
   transparently and submit the returned opaque `file_uri`.
-- Make job submission retry-safe: never replay an ambiguous submission unless the caller
-  supplied an `Idempotency-Key`.
+- Make job submission retry-safe by assigning one opaque idempotency key to each
+  `jobs.create()` invocation and reusing it across that invocation's transport retries.
+  Preserve caller-provided keys for durable business idempotency.
 - Expose distinct typed errors for an idempotency claim in progress and for a key/body
   conflict.
 - Provide capped exponential backoff with jitter for safe reads and idempotent submission.
@@ -163,20 +164,28 @@ upload can be added after measurement.
 Default transport timeout: 30 seconds per attempt. Default maximum retries: two after the
 initial attempt.
 
-Retryable failures are network errors, `429`, and `5xx`. Delay is capped exponential
-backoff with jitter, honoring `Retry-After` when present.
+Retryable failures are network errors, `429`, and `5xx`. A typed
+`idempotency_in_progress` `409` is also retryable for job submission because it can be the
+immediate replay of a request whose response was lost while the gateway finishes its
+claim. Other `409` responses and fingerprint-conflict `422` responses remain terminal.
+Delay is capped exponential backoff with jitter, honoring `Retry-After` when present.
 
 | Operation | Automatic retry |
 |---|---|
 | `GET` capabilities/jobs/moderation/report | Yes |
-| `POST /jobs` with `idempotencyKey` | Yes |
-| `POST /jobs` without `idempotencyKey` | Never |
+| `POST /jobs` | Yes, with one key per invocation |
 | Signed file `PUT` | Never in 0.1 |
 | Watermark mutation or webhook retry | Never |
 
-The final three operations are not safe reads. Silently replaying them can create extra
-objects or webhook deliveries, so the broader roadmap statement that every non-submit
-endpoint is safe to retry is intentionally narrowed here.
+At the start of `jobs.create()`, after local validation and before any upload or network
+await, the SDK uses the trimmed caller key or generates a fresh RFC 4122 UUID. The key is
+kept inside the request and is neither returned nor logged. All attempts made by that one
+transport request reuse it. A later invocation generates a different UUID. Generated
+keys protect only a live call; stable caller keys remain the only protection across
+process restarts, workers, queue redelivery, or deliberate later calls.
+
+Signed uploads, watermark mutation, and webhook retry are not safe reads and are not
+automatically replayed.
 
 ## 8. Error model
 
@@ -250,8 +259,12 @@ required. Required coverage:
 
 - constructor/environment validation and URL normalization;
 - request mapping without mutating metadata keys;
-- no retry for an unkeyed ambiguous job submission;
-- retry for keyed submission and safe reads;
+- response loss after acceptance followed by an in-progress replay and prior-response
+  recovery with one invocation key;
+- one generated key across network/`5xx`/`429` retries, a fresh key on the next call, and
+  caller-key override;
+- terminal fingerprint conflicts, validation failures, unrelated `409` responses, and
+  safe-read retries;
 - typed API/idempotency errors;
 - local upload header preservation and opaque URI submission;
 - polling completion and timeout;
@@ -315,6 +328,8 @@ Implemented in this repository:
 
 - dual ESM/CommonJS TypeScript package with bundled declarations;
 - authenticated transport, deadlines, conservative retries, and typed API errors;
+- invocation-scoped idempotency for safe submit retries without weakening durable caller
+  keys;
 - job create/get/list/wait, moderation, media-report, and manual webhook-retry methods;
 - ergonomic `source` mapping plus transparent local and batch-input uploads;
 - capabilities client and watermark-logo upload/confirm workflow;
@@ -323,8 +338,8 @@ Implemented in this repository:
 - unit coverage for safety-critical retry, upload, timeout, polling, packaging, and
   signature behavior.
 
-Local release checks currently pass: type-check, build, 26 tests, ES2017 consumer type
-compatibility, dependency audit, and package dry-run. Production validation from
+Local release checks currently pass: type-check, build, the full Node test suite, ES2017
+consumer type compatibility, dependency audit, and package dry-run. Production validation from
 `wahalao-functions` covers:
 
 - authenticated job submission through `POST /v1/jobs`;

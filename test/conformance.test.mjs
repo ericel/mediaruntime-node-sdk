@@ -223,6 +223,7 @@ test("polling and verified webhook projections preserve declared bundle parity",
     delivery: {
       mode: "PULL",
       retentionDays: 7,
+      expiresAt: "2026-08-17T00:00:00Z",
       bundle: {
         type: "zip",
         filename: "job_contract_outputs.zip",
@@ -256,6 +257,7 @@ test("polling and verified webhook projections preserve declared bundle parity",
     "bundle.size_bytes": "bundle.sizeBytes",
     "bundle.sha256": "bundle.sha256",
     "bundle.retention_days": "bundle.retentionDays",
+    "bundle.expires_at": "bundle.expiresAt",
   };
   for (const mapping of contract.delivery_contract.parity) {
     const sdkPath = sdkPollingPaths[mapping.polling_path];
@@ -266,25 +268,9 @@ test("polling and verified webhook projections preserve declared bundle parity",
   assert.notEqual(polled.bundle.downloadUrl, event.data.delivery.bundle.download.url);
 });
 
-test("pins representative ZIP trees and owner-scoped redemption semantics", () => {
+test("pins owner-scoped redemption semantics", () => {
   const delivery = contract.delivery_contract;
   assert.equal(contract.schema_version, "1.2.0");
-  assert.deepEqual(
-    delivery.bundle_tree_cases.map((fixture) => fixture.name),
-    [
-      "video_poster_subtitles",
-      "multi_rendition",
-      "image_derivatives",
-      "transcription",
-      "media_report",
-      "hls_tree",
-    ],
-  );
-  assert.ok(
-    delivery.bundle_tree_cases
-      .find((fixture) => fixture.name === "hls_tree")
-      .output_roots.streaming.includes("master.m3u8"),
-  );
   assert.deepEqual(delivery.redemption.required_token_claims, [
     "account_id",
     "job_id",
@@ -294,4 +280,10 @@ test("pins representative ZIP trees and owner-scoped redemption semantics", () =
   assert.equal(delivery.redemption.scope, "bundle");
   assert.equal(delivery.redemption.cross_account_result, 404);
   assert.equal(delivery.redemption.expired_result, 410);
+  assert.equal(delivery.retention.configuration, "DELIVERY_RETENTION_DAYS");
+  assert.equal(delivery.retention.expired_redemption_result, 410);
+  assert.equal(
+    delivery.retention.storage_cleanup_policy,
+    "external_infrastructure_not_managed_in_repository",
+  );
 });

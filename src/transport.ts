@@ -128,7 +128,9 @@ function apiError(
     code === "idempotency_in_progress" || (
       response.status === 409 &&
       request.operation === "create-job" &&
-      request.headers?.["Idempotency-Key"]
+      request.headers?.["Idempotency-Key"] &&
+      message.toLowerCase().includes("idempotency-key") &&
+      message.toLowerCase().includes("progress")
     )
   ) {
     return new IdempotencyInProgressError(message, options);
@@ -276,15 +278,18 @@ export class Transport {
           return (text ? JSON.parse(text) : undefined) as T;
         }
 
-        const shouldRetryStatus = response.status === 429 || response.status >= 500;
-        if (retryable && shouldRetryStatus && attempt + 1 < attempts) {
-          await response.body?.cancel();
+        const details = await responseDetails(response);
+        const error = apiError(response, details, request);
+        const shouldRetryResponse = response.status === 429 ||
+          response.status >= 500 ||
+          (response.status === 409 && error instanceof IdempotencyInProgressError);
+        if (retryable && shouldRetryResponse && attempt + 1 < attempts) {
           const delay = retryAfterMs(response) ?? backoffMs(attempt);
           await sleep(delay, request.signal);
           continue;
         }
 
-        throw apiError(response, await responseDetails(response), request);
+        throw error;
       } catch (error) {
         if (error instanceof MediaRuntimeApiError) throw error;
         if (request.signal?.aborted) throw request.signal.reason ?? error;

@@ -8,7 +8,7 @@ import {
   IdempotencyInProgressError,
   JobWaitTimeoutError,
   MediaRuntime,
-  MediaRuntimeConnectionError,
+  MediaRuntimeApiError,
   MediaRuntimeTimeoutError,
   ValidationError,
 } from "../dist/index.js";
@@ -174,33 +174,76 @@ test("forwards frozen output aliases for gateway-side resolution", async () => {
   assert.deepEqual(captured.outputs, ["video.web", "audio.transcription"]);
 });
 
-test("does not retry an ambiguous unkeyed job submission", async () => {
-  let calls = 0;
-  const media = new MediaRuntime({
-    apiKey: "sk_test",
-    maxRetries: 3,
-    fetch: async () => {
-      calls += 1;
-      throw new TypeError("socket closed");
-    },
-  });
-  await assert.rejects(
-    media.jobs.create({
-      source: "https://cdn.example.test/video.mp4",
-      outputs: [{ type: "mp4", preset: "mp4_720p_h264_aac" }],
-    }),
-    MediaRuntimeConnectionError,
-  );
-  assert.equal(calls, 1);
-});
-
-test("retries a keyed submission on a retryable response", async () => {
-  let calls = 0;
+test("recovers from response loss and an in-progress replay with one generated key", async () => {
+  const acceptedJobs = new Map();
+  const keys = [];
   const media = new MediaRuntime({
     apiKey: "sk_test",
     maxRetries: 2,
-    fetch: async () => {
+    fetch: async (_input, init) => {
+      const key = new Headers(init.headers).get("idempotency-key");
+      keys.push(key);
+      if (keys.length === 1) {
+        acceptedJobs.set(key, "job_accepted");
+        throw new TypeError("response lost after acceptance");
+      }
+      if (keys.length === 2) {
+        return json({
+          error: {
+            code: "idempotency_in_progress",
+            message: "A request with this Idempotency-Key is still in progress",
+            retryable: true,
+          },
+        }, 409, { "Retry-After": "0" });
+      }
+      return json({
+        job_id: acceptedJobs.get(key),
+        status: "QUEUED",
+        tier: "standard",
+        msg: "replayed",
+      });
+    },
+  });
+  const job = await media.jobs.create({
+    source: "https://cdn.example.test/video.mp4",
+    outputs: [{ type: "mp4", preset: "mp4_720p_h264_aac" }],
+  });
+  assert.equal(job.id, "job_accepted");
+  assert.equal("idempotencyKey" in job.toJSON(), false);
+  assert.equal(acceptedJobs.size, 1);
+  assert.equal(keys.length, 3);
+  assert.match(keys[0], /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.ok(keys.every((key) => key === keys[0]));
+});
+
+test("creates a fresh generated key for each later create invocation", async () => {
+  const keys = [];
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      keys.push(new Headers(init.headers).get("idempotency-key"));
+      return json({ job_id: `job_${keys.length}`, status: "QUEUED", tier: "standard", msg: "accepted" });
+    },
+  });
+  const params = {
+    source: "https://cdn.example.test/video.mp4",
+    outputs: ["video.web"],
+  };
+  await media.jobs.create(params);
+  await media.jobs.create(params);
+  assert.equal(keys.length, 2);
+  assert.notEqual(keys[0], keys[1]);
+});
+
+test("caller-provided idempotency key wins and is reused for retries", async () => {
+  let calls = 0;
+  const keys = [];
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    maxRetries: 2,
+    fetch: async (_input, init) => {
       calls += 1;
+      keys.push(new Headers(init.headers).get("idempotency-key"));
       if (calls === 1) return json({ detail: "temporary" }, 500, { "Retry-After": "0" });
       return json({ job_id: "job_123", status: "QUEUED", tier: "standard", msg: "accepted" });
     },
@@ -212,6 +255,28 @@ test("retries a keyed submission on a retryable response", async () => {
   });
   assert.equal(job.id, "job_123");
   assert.equal(calls, 2);
+  assert.deepEqual(keys, ["video:123:v1", "video:123:v1"]);
+});
+
+test("generated key is reused across 5xx and 429 retries", async () => {
+  const keys = [];
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    maxRetries: 2,
+    fetch: async (_input, init) => {
+      keys.push(new Headers(init.headers).get("idempotency-key"));
+      if (keys.length === 1) return json({ detail: "temporary" }, 503, { "Retry-After": "0" });
+      if (keys.length === 2) return json({ detail: "slow down" }, 429, { "Retry-After": "0" });
+      return json({ job_id: "job_retry", status: "QUEUED", tier: "standard", msg: "accepted" });
+    },
+  });
+  const job = await media.jobs.create({
+    source: "https://cdn.example.test/video.mp4",
+    outputs: ["video.web"],
+  });
+  assert.equal(job.id, "job_retry");
+  assert.equal(keys.length, 3);
+  assert.ok(keys.every((key) => key === keys[0]));
 });
 
 test("distinguishes idempotency in-progress and request-conflict responses", async () => {
@@ -231,6 +296,80 @@ test("distinguishes idempotency in-progress and request-conflict responses", asy
   };
   await assert.rejects(media.jobs.create(params), IdempotencyInProgressError);
   await assert.rejects(media.jobs.create(params), IdempotencyConflictError);
+});
+
+test("does not retry an idempotency fingerprint conflict", async () => {
+  let calls = 0;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    maxRetries: 3,
+    fetch: async () => {
+      calls += 1;
+      return json({
+        error: {
+          code: "idempotency_conflict",
+          message: "Idempotency-Key was already used with a different request body",
+          retryable: false,
+        },
+      }, 422);
+    },
+  });
+  await assert.rejects(
+    media.jobs.create({
+      source: "https://cdn.example.test/video.mp4",
+      outputs: ["video.web"],
+      idempotencyKey: "video:123:v1",
+    }),
+    IdempotencyConflictError,
+  );
+  assert.equal(calls, 1);
+});
+
+test("does not misclassify or retry an unrelated create-job 409", async () => {
+  let calls = 0;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    maxRetries: 3,
+    fetch: async () => {
+      calls += 1;
+      return json({ detail: { message: "Sandbox session already has an active job." } }, 409);
+    },
+  });
+  await assert.rejects(
+    media.jobs.create({
+      source: "https://cdn.example.test/video.mp4",
+      outputs: ["video.web"],
+    }),
+    (error) => error instanceof MediaRuntimeApiError && !(error instanceof IdempotencyInProgressError),
+  );
+  assert.equal(calls, 1);
+});
+
+test("does not retry terminal validation failures even with a generated key", async () => {
+  let calls = 0;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    maxRetries: 3,
+    fetch: async () => {
+      calls += 1;
+      return json({
+        error: {
+          code: "validation_error",
+          message: "source is invalid",
+          retryable: false,
+          details: [{ loc: ["body", "source"], msg: "invalid", type: "value_error" }],
+        },
+      }, 422);
+    },
+  });
+  await assert.rejects(
+    media.jobs.create({
+      source: "https://cdn.example.test/video.mp4",
+      outputs: ["video.web"],
+    }),
+    ValidationError,
+  );
+  assert.equal(calls, 1);
 });
 
 test("uploads a local source with all signed headers, without leaking the API key", async () => {

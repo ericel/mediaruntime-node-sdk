@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.5 — 2026-08-16
+
+- Generate one opaque idempotency key per `jobs.create()` invocation when the caller
+  omits one, and reuse it across network, `5xx`, `429`, and in-progress replay attempts.
+- Preserve caller-provided keys as the durable mechanism across restarts, redelivery, and
+  later invocations; generated key material is never exposed or logged.
+- Keep fingerprint conflicts, validation failures, and unrelated `409` responses
+  terminal.
+
 ## 0.2.4 — 2026-08-16
 
 - Vendor only the filtered public OpenAPI surface in repository conformance fixtures.

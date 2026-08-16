@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { JobWaitTimeoutError, ValidationError } from "./errors.js";
 import type {
   CreateJobParams,
@@ -140,6 +141,9 @@ export class JobsClient {
 
   async create(params: CreateJobParams): Promise<Job> {
     validateCreate(params);
+    // This key exists only for the lifetime of this invocation. It makes transport
+    // retries safe without pretending to replace a caller's durable business key.
+    const idempotencyKey = params.idempotencyKey?.trim() ?? randomUUID();
     let resolved: { source?: string; inputs?: ResolvedBatchInput[] };
     if ("source" in params && params.source !== undefined) {
       resolved = { source: await this.#uploads.resolveSource(params.source, params.signal) };
@@ -155,13 +159,12 @@ export class JobsClient {
       resolved = { inputs };
     }
 
-    const idempotencyKey = params.idempotencyKey?.trim();
     const value = await this.#transport.request<unknown>({
       method: "POST",
       path: "/jobs",
       body: serializeCreateJob(params, resolved),
-      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
-      retry: idempotencyKey ? "idempotent-submit" : "never",
+      headers: { "Idempotency-Key": idempotencyKey },
+      retry: "idempotent-submit",
       signal: params.signal,
       operation: "create-job",
     });
