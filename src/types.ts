@@ -116,7 +116,7 @@ interface CreateJobCommon {
   metadata?: Metadata;
   moderation?: ModerationOptions;
   watermark?: WatermarkOptions;
-  /** Caller-controlled stable key. The SDK never generates one implicitly. */
+  /** Caller-controlled durable key. When omitted, the SDK generates one for this invocation. */
   idempotencyKey?: string;
   signal?: AbortSignal;
 }

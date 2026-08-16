@@ -4,9 +4,13 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable. Version `0.2.1` is validated against the production API from a Node.js 22
+Status: stable `1.0.0`. The SDK is validated against the production API from a Node.js 22
 Firebase Functions consumer, including job submission, terminal webhook verification,
 artifact reconciliation, and moderation persistence.
+
+The documented `1.x` public API follows semantic versioning. Breaking changes to public
+exports, request options, error types, or documented response projections require a new
+major version; compatible fields and capabilities may be added in minor releases.
 
 ## Install
 
@@ -14,7 +18,7 @@ artifact reconciliation, and moderation persistence.
 npm install @mediaruntime/node
 ```
 
-Node.js 20 or newer is required.
+Node.js 22 or newer is required.
 
 ## Submit, wait, and get the bundle
 

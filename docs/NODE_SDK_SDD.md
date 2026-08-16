@@ -1,11 +1,11 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestones A and B implemented and published as stable `0.2.4`
+Status: stable public contract released as `1.0.0`
 
 Package: `@mediaruntime/node`
 
 Repository: `ericel/mediaruntime-node-sdk`
-Runtime: Node.js 20+
+Runtime: Node.js 22+
 
 ## 1. Purpose
 
@@ -274,8 +274,8 @@ required. Required coverage:
 - webhook success, invalid signature, stale timestamp, and raw-body sensitivity;
 - ESM and CommonJS package loading after build.
 
-A separately credentialed integration suite against a non-production gateway is planned
-before `1.0.0`; it is not run from ordinary package tests.
+Credentialed production smoke tests cover signed local uploads, bundle redirects, and
+signed webhook payloads; they remain separate from ordinary package tests.
 
 ## 13. Delivery plan
 
@@ -296,11 +296,11 @@ before `1.0.0`; it is not run from ordinary package tests.
 - Add shared conformance fixtures between gateway and SDK.
 - Exercise the fixture in ordinary CI without a runtime dependency on the gateway repo.
 
-Remaining before `1.0.0`:
+The `1.0.0` stability gates are complete:
 
-- Test real signed uploads, bundle redirects, and webhook payloads in staging.
-- Decide support window for Node 20 after its upstream end-of-life.
-- Claim npm namespace and configure provenance-based publishing.
+- Real signed uploads, bundle redirects, and webhook payloads have production coverage.
+- Node.js 22 is the minimum supported runtime; end-of-life Node.js 20 is excluded.
+- The npm namespace is claimed and releases use provenance-based trusted publishing.
 
 ### Milestone C — ergonomic additions
 
@@ -318,7 +318,7 @@ Remaining before `1.0.0`:
 - Staging smoke test covers URL source, local upload, `wait()`, and webhook verification.
 - Package namespace and repository metadata are verified before publish.
 - MIT licensing and the `ericel/mediaruntime-node-sdk` repository are configured.
-- Pull requests and `main` pass CI on Node.js 20, 22, and 24.
+- Pull requests and `main` pass CI on Node.js 22 and 24.
 - Version-matching `v*` tags publish through npm Trusted Publishing; prereleases use
   `next` and stable versions use `latest`.
 
@@ -347,7 +347,7 @@ consumer type compatibility, dependency audit, and package dry-run. Production v
 - output-bundle import and Firestore reconciliation;
 - report-only moderation persistence on processed gallery media.
 
-Stable `0.2.0` adds the six frozen aliases without moving resolution or billing policy
+Stable `1.0.0` includes the six frozen aliases without moving resolution or billing policy
 into the client. Alias strings are forwarded unchanged, and explicit output objects remain
 fully supported.
 

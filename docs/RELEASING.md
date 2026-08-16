@@ -1,6 +1,6 @@
 # Releasing `@mediaruntime/node`
 
-CI validates pull requests and `main` on Node.js 20, 22, and 24. npm publishing is
+CI validates pull requests and `main` on supported Node.js 22 and 24 releases. npm publishing is
 tag-driven and uses npm Trusted Publishing with GitHub Actions OIDC, so the repository
 does not store a long-lived npm token.
 
@@ -31,15 +31,13 @@ The workflow rejects a tag that differs from `package.json`. Versions containing
 prerelease suffix, such as `0.1.0-beta.1`, publish under `next`; stable versions publish
 under `latest`.
 
-Example after merging a stable `0.1.0` version bump:
+Example after merging a stable `1.0.0` version bump:
 
 ```bash
 git switch main
 git pull --ff-only
-git tag v0.1.0
-git push origin v0.1.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-The beta packages were published manually while the trusted-publisher identity was being
-validated. Stable `0.1.0` and all subsequent versions must use the workflow so npm records
-GitHub provenance for the release.
+All stable releases use the workflow so npm records GitHub provenance for the release.
