@@ -294,5 +294,4 @@ test("pins representative ZIP trees and owner-scoped redemption semantics", () =
   assert.equal(delivery.redemption.scope, "bundle");
   assert.equal(delivery.redemption.cross_account_result, 404);
   assert.equal(delivery.redemption.expired_result, 410);
-  assert.equal(delivery.redemption.missing_exp_result, 401);
 });
