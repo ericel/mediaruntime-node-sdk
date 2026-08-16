@@ -101,6 +101,48 @@ test("maps ergonomic create input to the current gateway contract without changi
   });
 });
 
+test("sends canonical source for every batch input", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({ job_id: "job_batch", status: "queued", tier: "standard", msg: "accepted" });
+    },
+  });
+
+  const job = await media.jobs.create({
+    inputs: [
+      {
+        source: "https://cdn.example.test/a.mp4",
+        inputId: "asset-a",
+        metadata: { position: 0 },
+      },
+      {
+        source: new URL("https://cdn.example.test/b.mp4"),
+        inputId: "asset-b",
+      },
+    ],
+    outputs: ["video.web"],
+  });
+
+  assert.equal(job.id, "job_batch");
+  assert.deepEqual(captured, {
+    inputs: [
+      {
+        source: "https://cdn.example.test/a.mp4",
+        input_id: "asset-a",
+        metadata: { position: 0 },
+      },
+      {
+        source: "https://cdn.example.test/b.mp4",
+        input_id: "asset-b",
+      },
+    ],
+    outputs: ["video.web"],
+  });
+});
+
 test("forwards frozen output aliases for gateway-side resolution", async () => {
   let captured;
   const media = new MediaRuntime({

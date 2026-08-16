@@ -150,7 +150,7 @@ export function serializeCreateJob(
   if (resolved.source !== undefined) body.file_url = resolved.source;
   if (resolved.inputs !== undefined) {
     body.inputs = resolved.inputs.map((input) => {
-      const wireInput: UnknownRecord = { file_url: input.source };
+      const wireInput: UnknownRecord = { source: input.source };
       setDefined(wireInput, "input_id", input.inputId);
       if (input.metadata !== undefined) wireInput.metadata = input.metadata;
       return wireInput;

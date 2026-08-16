@@ -4,7 +4,7 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable. Version `0.2.0` is validated against the production API from a Node.js 22
+Status: stable. Version `0.2.1` is validated against the production API from a Node.js 22
 Firebase Functions consumer, including job submission, terminal webhook verification,
 artifact reconciliation, and moderation persistence.
 
@@ -69,6 +69,21 @@ servers:
 const localMedia = new MediaRuntime({
   apiKey: process.env.MEDIARUNTIME_API_KEY,
   baseUrl: "http://localhost:8001",
+});
+```
+
+## Batch inputs
+
+Use `source` on every batch item. Each value accepts the same HTTP(S), `gs://`, local-path,
+or `file://` forms as a single job; the SDK uploads local files before submission.
+
+```ts
+const batch = await media.jobs.create({
+  inputs: [
+    { source: "https://cdn.example.com/a.mp4", inputId: "asset-a" },
+    { source: "./b.mp4", inputId: "asset-b", metadata: { position: 1 } },
+  ],
+  outputs: ["video.web"],
 });
 ```
 
