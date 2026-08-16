@@ -20,6 +20,9 @@ void client.jobs.create({
 });
 void client.webhooks.fastify(async (event, _request, reply) => {
   console.log(event.id);
+  if (event.status === "COMPLETED") {
+    console.log(event.data.delivery?.bundle?.download.url);
+  }
   reply.code(204).send();
 });
 void new MediaRuntimeError("consumer-compatible error", { cause: new Error("cause") });

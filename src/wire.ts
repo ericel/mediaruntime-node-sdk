@@ -147,7 +147,7 @@ export function serializeCreateJob(
   resolved: { source?: string; inputs?: ResolvedBatchInput[] },
 ): UnknownRecord {
   const body: UnknownRecord = {};
-  if (resolved.source !== undefined) body.file_url = resolved.source;
+  if (resolved.source !== undefined) body.source = resolved.source;
   if (resolved.inputs !== undefined) {
     body.inputs = resolved.inputs.map((input) => {
       const wireInput: UnknownRecord = { source: input.source };

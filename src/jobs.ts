@@ -23,7 +23,7 @@ import {
   type ResolvedBatchInput,
 } from "./wire.js";
 
-const TERMINAL_STATUSES = new Set(["COMPLETED", "FAILED", "REJECTED"]);
+const TERMINAL_STATUSES = new Set(["COMPLETED", "FAILED", "REJECTED", "PARTIAL"]);
 
 function jobPathId(jobId: string): string {
   const value = jobId.trim();

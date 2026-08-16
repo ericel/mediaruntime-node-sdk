@@ -1,6 +1,6 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestones A and B implemented; stable `0.2.0` includes frozen output aliases
+Status: Milestones A and B implemented and published as stable `0.2.2`
 
 Package: `@mediaruntime/node`
 
@@ -67,9 +67,15 @@ The current gateway implementation is authoritative:
 - `transcoder-gateway-api/services/webhook.py` defines webhook signing.
 - `GET /v1/capabilities` is the runtime source of compatibility rules and output aliases.
 
-The gateway currently accepts `file_url`, not `source`. The SDK exposes `source` and maps
-it to `file_url`; this is a client projection, not a dependency on the proposed gateway
-field alias.
+The gateway's canonical public input is `source` at both scalar and batch-item scope.
+It still accepts `file_url` as a legacy compatibility spelling, but official SDKs emit
+only `source`.
+
+Versioned snapshots of the gateway OpenAPI document and cross-client conformance fixture
+live under `contracts/v1/`. The gateway remains authoritative; the snapshot lets normal
+SDK CI validate its wire surface without importing a sibling checkout. Maintainers use
+`scripts/contracts.mjs` for an explicit byte-for-byte sync/check during coordinated API
+changes.
 
 An OpenAPI-based generated transport may replace parts of the hand-written wire layer
 later. Public resource classes and method signatures remain hand-written because
@@ -118,8 +124,8 @@ It does not use a generic recursive case converter: metadata is opaque customer 
 must be sent byte-for-byte with its original keys.
 
 ```text
-source                       -> file_url
-inputs[].source              -> inputs[].file_url
+source                       -> source
+inputs[].source              -> inputs[].source
 webhookUrl                   -> webhook_url
 output.pathSuffix            -> path_suffix
 output.removeBg              -> remove_bg
@@ -130,6 +136,10 @@ output.posterFormat          -> poster_format
 
 Nested first-party option fields are mapped explicitly. `metadata` and input metadata are
 copied unchanged.
+
+`source` is the canonical public spelling for both scalar and batch submissions. The
+gateway continues to accept `file_url` for legacy HTTP clients, but the SDK never emits
+that compatibility spelling.
 
 Exactly one of `source` and `inputs` is required. A request must contain at least one
 output unless `moderation.enabled` is true. The gateway remains authoritative and may
@@ -142,7 +152,7 @@ For a source that is not an HTTP(S), `gs://`, or `file://` URL:
 1. Resolve and validate the local file.
 2. Call `POST /v1/upload-url` with its basename and inferred content type.
 3. Stream the file to the signed URL with every returned `upload_headers` entry.
-4. Submit the opaque returned `file_uri` as `file_url`.
+4. Submit the opaque returned `file_uri` as `source`.
 
 `file://` URLs are converted with Node's URL utilities. Batch inputs run uploads
 sequentially in 0.1 to avoid unbounded memory/file-descriptor pressure; bounded parallel
@@ -243,6 +253,9 @@ required. Required coverage:
 - typed API/idempotency errors;
 - local upload header preservation and opaque URI submission;
 - polling completion and timeout;
+- all gateway-declared single and batch terminal states, including `PARTIAL` batches;
+- canonical scalar/batch source, all frozen aliases, current error envelopes, and
+  polling/webhook bundle parity from the checked-in gateway conformance fixture;
 - webhook success, invalid signature, stale timestamp, and raw-body sensitivity;
 - ESM and CommonJS package loading after build.
 
@@ -262,10 +275,14 @@ before `1.0.0`; it is not run from ordinary package tests.
 - Watermark-logo upload/confirm helper.
 - Unit tests and quickstart.
 
-### Milestone B — contract hardening
+### Milestone B — contract hardening (implemented)
 
-- Export or generate a machine-readable gateway schema.
+- Check in the gateway's machine-readable OpenAPI v1 schema with provenance hashes.
 - Add shared conformance fixtures between gateway and SDK.
+- Exercise the fixture in ordinary CI without a runtime dependency on the gateway repo.
+
+Remaining before `1.0.0`:
+
 - Test real signed uploads, bundle redirects, and webhook payloads in staging.
 - Decide support window for Node 20 after its upstream end-of-life.
 - Claim npm namespace and configure provenance-based publishing.

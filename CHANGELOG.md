@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 — 2026-08-16
+
+- Send canonical `source` for scalar and batch job submissions.
+- Treat batch `PARTIAL` as terminal in `job.wait()`.
+- Pin the versioned gateway OpenAPI and conformance artifacts in CI.
+- Add typed webhook bundle, metadata, and error projections.
+
 ## 0.2.1 — 2026-08-16
 
 - Send canonical `source` for every batch item while retaining transparent local uploads.

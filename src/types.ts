@@ -26,7 +26,8 @@ export type KnownJobStatus =
   | "PROCESSING"
   | "COMPLETED"
   | "FAILED"
-  | "REJECTED";
+  | "REJECTED"
+  | "PARTIAL";
 
 export type JobStatus = KnownJobStatus | (string & {});
 export type Source = string | URL;
@@ -354,11 +355,54 @@ export interface Capabilities {
   notes: string[];
 }
 
+export interface WebhookBundleDownload {
+  url: string;
+  expiresAt?: string;
+}
+
+export interface WebhookBundle {
+  type: "zip" | (string & {});
+  filename: string;
+  size_bytes: number;
+  sha256?: string;
+  download: WebhookBundleDownload;
+}
+
+export interface WebhookDelivery {
+  mode: "PULL" | "NONE" | (string & {});
+  retentionDays?: number;
+  expiresAt?: string;
+  bundle?: WebhookBundle;
+  layout?: string;
+  deliverables?: unknown[];
+  manifests?: Record<string, unknown>;
+}
+
+export interface WebhookJobError {
+  code?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface WebhookMeta {
+  request_metadata?: Metadata;
+  bundle?: {
+    gs?: string;
+    url?: string;
+    sha256?: string;
+    size_bytes?: number;
+  };
+  [key: string]: unknown;
+}
+
 export interface WebhookPayload {
   event_id?: string;
   job_id?: string;
   account_id?: string;
   status?: JobStatus;
+  delivery?: WebhookDelivery;
+  error?: WebhookJobError | string;
+  meta?: WebhookMeta;
   [key: string]: unknown;
 }
 

@@ -86,7 +86,7 @@ test("maps ergonomic create input to the current gateway contract without changi
   assert.equal(new Headers(captured.init.headers).get("x-api-key"), "sk_test");
   assert.equal(new Headers(captured.init.headers).get("idempotency-key"), "video:123:v1");
   assert.deepEqual(JSON.parse(captured.init.body), {
-    file_url: "https://cdn.example.test/video.mp4",
+    source: "https://cdn.example.test/video.mp4",
     outputs: [
       {
         type: "mp4",
@@ -271,7 +271,7 @@ test("uploads a local source with all signed headers, without leaking the API ke
     assert.equal(signedHeaders.get("content-type"), "video/mp4");
     assert.equal(signedHeaders.get("x-goog-test"), "preserve");
     assert.equal(signedHeaders.get("x-api-key"), null);
-    assert.equal(JSON.parse(calls[2].init.body).file_url, "gs://input-bucket/opaque/sample.mp4");
+    assert.equal(JSON.parse(calls[2].init.body).source, "gs://input-bucket/opaque/sample.mp4");
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
