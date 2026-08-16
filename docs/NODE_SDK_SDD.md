@@ -1,6 +1,6 @@
 # MediaRuntime Node SDK — Software Design Document
 
-Status: Milestones A and B implemented and published as stable `0.2.2`
+Status: Milestones A and B implemented and published as stable `0.2.3`
 
 Package: `@mediaruntime/node`
 
@@ -182,7 +182,9 @@ endpoint is safe to retry is intentionally narrowed here.
 
 All SDK errors extend `MediaRuntimeError`.
 
-- `MediaRuntimeApiError`: HTTP status, response headers, structured detail, and field.
+- `MediaRuntimeApiError`: gateway `code`, message, HTTP `status`, `retryable`,
+  `requestId`, normalized `details`, complete compatibility `responseBody`, response
+  headers, and named validation field.
 - `AuthenticationError`: `401`.
 - `PermissionDeniedError`: `403`.
 - `NotFoundError`: `404`.
@@ -195,8 +197,8 @@ All SDK errors extend `MediaRuntimeError`.
 - `JobWaitTimeoutError`: polling reached its deadline; contains the last observed job.
 - `WebhookVerificationError`: malformed, stale, or invalid webhook signature/body.
 
-Unknown gateway error bodies remain available through `details`; the SDK never discards
-the server's diagnostic payload.
+The gateway owns error codes and retryability. Unknown or legacy bodies fall back to
+`code: "api_error"`; their complete payload remains available through `responseBody`.
 
 ## 9. Webhook verification
 

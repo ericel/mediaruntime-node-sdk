@@ -161,6 +161,27 @@ await app.register(async (webhookRoutes) => {
 If your application already uses a raw-body plugin, the adapter prefers
 `request.rawBody` and falls back to a Buffer in `request.body`. Parsed JSON fails closed.
 
+## Error handling
+
+Every gateway response carries `X-Request-Id`. API errors expose the same correlation ID
+alongside the gateway-owned error code and retry classification:
+
+```ts
+import { MediaRuntimeApiError } from "@mediaruntime/node";
+
+try {
+  await media.jobs.get("job_123");
+} catch (error) {
+  if (error instanceof MediaRuntimeApiError) {
+    console.error(error.code, error.status, error.retryable, error.requestId, error.details);
+  }
+}
+```
+
+`responseBody` retains the complete compatibility response. Treat `retryable` as a
+transport classification: retrying an ambiguous job submission is safe only when the
+original call used an `Idempotency-Key`.
+
 ## Configuration
 
 Constructor options override environment variables:

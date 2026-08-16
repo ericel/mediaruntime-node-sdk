@@ -167,10 +167,31 @@ test("current gateway error envelopes map to the existing typed errors", async (
     await assert.rejects(action, (error) => {
       assert.ok(error instanceof ErrorType, `${name} produced ${error?.constructor?.name}`);
       assert.equal(error.status, fixture.status);
+      assert.equal(error.code, fixture.body.error.code);
+      assert.equal(error.retryable, fixture.body.error.retryable);
+      assert.equal(error.requestId, fixture.body.error.request_id);
+      assert.deepEqual(error.details, fixture.body.error.details);
+      assert.deepEqual(error.responseBody, fixture.body);
       if (name === "validation") assert.equal(error.field, "source");
       return true;
     });
   }
+});
+
+test("request correlation contract is constrained and normalized", () => {
+  assert.equal(contract.request_correlation.header, "X-Request-Id");
+  assert.match(
+    contract.request_correlation.valid_inbound_example,
+    new RegExp(contract.request_correlation.accepted_pattern),
+  );
+  assert.deepEqual(contract.error_responses.normalized_fields, [
+    "code",
+    "message",
+    "status",
+    "retryable",
+    "request_id",
+    "details",
+  ]);
 });
 
 test("polling and verified webhook projections preserve declared bundle parity", async () => {

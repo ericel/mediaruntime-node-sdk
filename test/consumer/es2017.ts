@@ -1,5 +1,6 @@
 import {
   MediaRuntime,
+  MediaRuntimeApiError,
   MediaRuntimeError,
   WebhookVerificationError,
 } from "@mediaruntime/node";
@@ -26,4 +27,9 @@ void client.webhooks.fastify(async (event, _request, reply) => {
   reply.code(204).send();
 });
 void new MediaRuntimeError("consumer-compatible error", { cause: new Error("cause") });
+void client.jobs.get("job_123").catch((error: unknown) => {
+  if (error instanceof MediaRuntimeApiError) {
+    console.log(error.code, error.status, error.retryable, error.requestId, error.details);
+  }
+});
 void new WebhookVerificationError("invalid_body", "invalid body", { cause: new Error("cause") });

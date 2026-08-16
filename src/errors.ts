@@ -22,7 +22,11 @@ export class MediaRuntimeError extends Error {
 
 export interface ApiErrorOptions {
   status: number;
+  code?: string;
+  retryable?: boolean;
+  requestId?: string;
   details?: unknown;
+  responseBody?: unknown;
   field?: string;
   headers?: Headers;
 }
@@ -30,14 +34,22 @@ export interface ApiErrorOptions {
 export class MediaRuntimeApiError extends MediaRuntimeError {
   override readonly name: string = "MediaRuntimeApiError";
   readonly status: number;
+  readonly code: string;
+  readonly retryable: boolean;
+  readonly requestId?: string;
   readonly details: unknown;
+  readonly responseBody: unknown;
   readonly field?: string;
   readonly headers?: Headers;
 
   constructor(message: string, options: ApiErrorOptions) {
     super(message);
     this.status = options.status;
+    this.code = options.code ?? "api_error";
+    this.retryable = options.retryable ?? false;
+    this.requestId = options.requestId;
     this.details = options.details;
+    this.responseBody = options.responseBody;
     this.field = options.field;
     this.headers = options.headers;
   }

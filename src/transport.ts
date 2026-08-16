@@ -44,10 +44,18 @@ function normalizeApiBase(baseUrl: string): string {
   return trimmed.endsWith("/v1") ? trimmed : `${trimmed}/v1`;
 }
 
+function normalizedError(details: unknown): Record<string, unknown> | undefined {
+  if (!details || typeof details !== "object") return undefined;
+  const error = (details as Record<string, unknown>).error;
+  return error && typeof error === "object" ? error as Record<string, unknown> : undefined;
+}
+
 function errorMessage(details: unknown, status: number): string {
   if (typeof details === "string" && details) return details;
   if (details && typeof details === "object") {
     const record = details as Record<string, unknown>;
+    const error = normalizedError(details);
+    if (typeof error?.message === "string") return error.message;
     if (typeof record.detail === "string") return record.detail;
     if (typeof record.message === "string") return record.message;
     if (typeof record.msg === "string") return record.msg;
@@ -67,7 +75,10 @@ function errorMessage(details: unknown, status: number): string {
 
 function errorField(details: unknown): string | undefined {
   if (!details || typeof details !== "object") return undefined;
-  const detail = (details as Record<string, unknown>).detail;
+  const normalized = normalizedError(details);
+  const detail = normalized && "details" in normalized
+    ? normalized.details
+    : (details as Record<string, unknown>).detail;
   if (!Array.isArray(detail) || detail.length === 0) return undefined;
   const first = detail[0];
   if (!first || typeof first !== "object") return undefined;
@@ -91,9 +102,21 @@ function apiError(
   request: TransportRequest,
 ): MediaRuntimeApiError {
   const message = errorMessage(details, response.status);
+  const normalized = normalizedError(details);
+  const code = typeof normalized?.code === "string" ? normalized.code : "api_error";
+  const normalizedDetails = normalized && "details" in normalized
+    ? normalized.details
+    : details;
+  const requestId = (
+    typeof normalized?.request_id === "string" ? normalized.request_id : undefined
+  ) ?? response.headers.get("X-Request-Id") ?? undefined;
   const options = {
     status: response.status,
-    details,
+    code,
+    retryable: typeof normalized?.retryable === "boolean" ? normalized.retryable : false,
+    requestId,
+    details: normalizedDetails,
+    responseBody: details,
     field: errorField(details),
     headers: response.headers,
   };
@@ -102,17 +125,21 @@ function apiError(
   if (response.status === 404) return new NotFoundError(message, options);
   if (response.status === 429) return new RateLimitError(message, options);
   if (
-    response.status === 409 &&
-    request.operation === "create-job" &&
-    request.headers?.["Idempotency-Key"]
+    code === "idempotency_in_progress" || (
+      response.status === 409 &&
+      request.operation === "create-job" &&
+      request.headers?.["Idempotency-Key"]
+    )
   ) {
     return new IdempotencyInProgressError(message, options);
   }
   if (
-    response.status === 422 &&
-    request.operation === "create-job" &&
-    message.toLowerCase().includes("idempotency-key") &&
-    message.toLowerCase().includes("different")
+    code === "idempotency_conflict" || (
+      response.status === 422 &&
+      request.operation === "create-job" &&
+      message.toLowerCase().includes("idempotency-key") &&
+      message.toLowerCase().includes("different")
+    )
   ) {
     return new IdempotencyConflictError(message, options);
   }
@@ -207,6 +234,7 @@ export class Transport {
     if (authenticated && !this.#apiKey) {
       throw new AuthenticationError("A MediaRuntime API key is required for this operation", {
         status: 401,
+        code: "authentication_error",
       });
     }
 
