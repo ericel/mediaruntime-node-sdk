@@ -10,6 +10,7 @@ const client = new MediaRuntime({
 });
 
 void client.jobs.list({ limit: 1 });
+void client.jobs.create({ source: "https://example.com/video.mp4", outputs: ["video.web"] });
 void client.webhooks.fastify(async (event, _request, reply) => {
   console.log(event.id);
   reply.code(204).send();
