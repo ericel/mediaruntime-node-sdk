@@ -443,6 +443,7 @@ export function parseCapabilities(value: unknown): Capabilities {
     capabilities: stringRecord(data.capabilities),
     outputTypes: arrayRecord(data.output_types),
     presetOverrides: arrayRecord(data.preset_overrides),
+    publicPresets: stringArray(data.public_presets),
     presets,
     features: Object.fromEntries(
       Object.entries(record(data.features)).map(([name, item]) => [name, record(item)]),

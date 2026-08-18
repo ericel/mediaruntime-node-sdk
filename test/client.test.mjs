@@ -444,6 +444,7 @@ test("capabilities are available without an API key and safe reads retry", async
         capabilities: { visual: "a video or image stream" },
         output_types: { mp4: ["timeline", "visual"] },
         preset_overrides: {},
+        public_presets: ["webm_vp9_1080p"],
         presets: {
           webm_vp9_1080p: {
             output_type: "webm",
@@ -472,6 +473,7 @@ test("capabilities are available without an API key and safe reads retry", async
   });
   const result = await media.capabilities.retrieve();
   assert.deepEqual(result.outputTypes.mp4, ["timeline", "visual"]);
+  assert.deepEqual(result.publicPresets, ["webm_vp9_1080p"]);
   assert.equal(result.outputAliases["video.web"].preset, "mp4_720p_h264_aac");
   assert.equal(result.presets.webm_vp9_1080p.outputType, "webm");
   assert.equal(result.presets.webm_vp9_1080p.codec, "vp9");

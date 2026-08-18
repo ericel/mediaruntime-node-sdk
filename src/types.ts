@@ -342,6 +342,8 @@ export interface Capabilities {
   capabilities: Record<string, string>;
   outputTypes: Record<string, string[]>;
   presetOverrides: Record<string, string[]>;
+  /** Ordered preset IDs that the gateway intentionally exposes to API consumers. */
+  publicPresets: string[];
   presets: Record<
     string,
     {
