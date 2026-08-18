@@ -444,6 +444,19 @@ test("capabilities are available without an API key and safe reads retry", async
         capabilities: { visual: "a video or image stream" },
         output_types: { mp4: ["timeline", "visual"] },
         preset_overrides: {},
+        presets: {
+          webm_vp9_1080p: {
+            output_type: "webm",
+            source_kinds: ["video"],
+            base_tier: "premium",
+            description: "VP9 WebM",
+            artifacts: ["VP9 WebM"],
+            codec: "vp9",
+          },
+        },
+        features: {
+          moderation: { rejection_status: "REJECTED" },
+        },
         output_aliases: {
           "video.web": {
             type: "mp4",
@@ -460,6 +473,9 @@ test("capabilities are available without an API key and safe reads retry", async
   const result = await media.capabilities.retrieve();
   assert.deepEqual(result.outputTypes.mp4, ["timeline", "visual"]);
   assert.equal(result.outputAliases["video.web"].preset, "mp4_720p_h264_aac");
+  assert.equal(result.presets.webm_vp9_1080p.outputType, "webm");
+  assert.equal(result.presets.webm_vp9_1080p.codec, "vp9");
+  assert.equal(result.features.moderation.rejection_status, "REJECTED");
   assert.equal(calls, 2);
 });
 

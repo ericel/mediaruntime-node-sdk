@@ -2,7 +2,7 @@ export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type Metadata = Record<string, JsonValue>;
 
-export type OutputType = "mp4" | "hls" | "audio" | "image" | "social" | "gif" | "frames";
+export type OutputType = "mp4" | "webm" | "hls" | "dash" | "audio" | "image" | "social" | "gif" | "frames";
 export type OutputAlias =
   | "video.web"
   | "video.streaming"
@@ -342,6 +342,21 @@ export interface Capabilities {
   capabilities: Record<string, string>;
   outputTypes: Record<string, string[]>;
   presetOverrides: Record<string, string[]>;
+  presets: Record<
+    string,
+    {
+      outputType: OutputType;
+      sourceKinds: string[];
+      baseTier: "standard" | "premium";
+      description: string;
+      artifacts: string[];
+      codec?: string;
+      container?: string;
+      parameterized?: boolean;
+      example?: string;
+    }
+  >;
+  features: Record<string, Record<string, unknown>>;
   outputAliases: Record<
     string,
     {

@@ -422,10 +422,31 @@ export function parseCapabilities(value: unknown): Capabilities {
       }];
     }),
   );
+  const presets = Object.fromEntries(
+    Object.entries(record(data.presets)).map(([name, item]) => {
+      const spec = record(item);
+      const parsed: Capabilities["presets"][string] = {
+        outputType: String(spec.output_type ?? "") as Capabilities["presets"][string]["outputType"],
+        sourceKinds: stringArray(spec.source_kinds),
+        baseTier: String(spec.base_tier ?? "standard") as Capabilities["presets"][string]["baseTier"],
+        description: String(spec.description ?? ""),
+        artifacts: stringArray(spec.artifacts),
+      };
+      if (typeof spec.codec === "string") parsed.codec = spec.codec;
+      if (typeof spec.container === "string") parsed.container = spec.container;
+      if (typeof spec.parameterized === "boolean") parsed.parameterized = spec.parameterized;
+      if (typeof spec.example === "string") parsed.example = spec.example;
+      return [name, parsed];
+    }),
+  );
   return {
     capabilities: stringRecord(data.capabilities),
     outputTypes: arrayRecord(data.output_types),
     presetOverrides: arrayRecord(data.preset_overrides),
+    presets,
+    features: Object.fromEntries(
+      Object.entries(record(data.features)).map(([name, item]) => [name, record(item)]),
+    ),
     outputAliases,
     notes: stringArray(data.notes),
   };

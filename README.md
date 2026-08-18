@@ -99,8 +99,9 @@ const batch = await media.jobs.create({
 
 ## Moderation
 
-Enable report-only moderation when creating a visual-media job, then retrieve its typed
-result after completion:
+Choose observational `report` moderation or fail-closed `block` enforcement when creating
+a visual-media job, then retrieve its typed result after completion. In block mode,
+`review` or `block` ends the job as `REJECTED` before transcoding; `allow` continues.
 
 ```ts
 const job = await media.jobs.create({
@@ -117,6 +118,18 @@ const result = await job.wait();
 const moderation = await media.jobs.getModeration(result.id);
 console.log(moderation.verdict, moderation.flaggedChecks);
 ```
+
+Explicit outputs include MPEG-DASH and VP9/WebM:
+
+```ts
+outputs: [
+  { type: "dash", preset: "dash_ladder_v1" },
+  { type: "webm", preset: "webm_vp9_1080p" },
+]
+```
+
+`media.capabilities.retrieve()` returns the gateway's complete preset catalog and feature
+contracts, including smart-crop semantics and moderation enforcement modes.
 
 ## Verify webhooks
 
