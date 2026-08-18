@@ -4,7 +4,7 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable `1.0.0`. The SDK is validated against the production API from a Node.js 22
+Status: stable `1.1.0`. The SDK is validated against the production API from a Node.js 22
 Firebase Functions consumer, including job submission, terminal webhook verification,
 artifact reconciliation, and moderation persistence.
 

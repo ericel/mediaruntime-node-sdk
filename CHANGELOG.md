@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 — 2026-08-18
+
+- Expose the complete typed gateway capability catalog through
+  `media.capabilities.retrieve()`.
+- Include public preset IDs, accepted source kinds, output artifacts, base tiers,
+  optional feature metadata, and the six frozen aliases.
+- Preserve additive capability fields under the stable 1.x compatibility policy.
+
 ## 1.0.0 — 2026-08-16
 
 - Declare the documented SDK surface stable under semantic versioning.
