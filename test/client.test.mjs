@@ -174,6 +174,108 @@ test("forwards frozen output aliases for gateway-side resolution", async () => {
   assert.deepEqual(captured.outputs, ["video.web", "audio.transcription"]);
 });
 
+test("submits a hosted recipe without inline processing overrides and preserves its acknowledgement", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({
+        job_id: "job_recipe",
+        status: "queued",
+        recipe: {
+          name: "web-video",
+          version: 1,
+          reference: "web-video@1",
+          built_in: true,
+          sha256: "a".repeat(64),
+        },
+      });
+    },
+  });
+
+  const job = await media.jobs.create({
+    source: "https://cdn.example.test/video.mp4",
+    recipe: "web-video",
+  });
+
+  assert.deepEqual(captured, {
+    source: "https://cdn.example.test/video.mp4",
+    recipe: "web-video",
+  });
+  assert.equal(job.recipe.reference, "web-video@1");
+  assert.equal(job.recipe.builtIn, true);
+  await assert.rejects(
+    media.jobs.create({
+      source: "https://cdn.example.test/video.mp4",
+      recipe: "web-video",
+      outputs: ["video.web"],
+    }),
+    ValidationError,
+  );
+});
+
+test("manages immutable hosted recipes and maps nested template options ergonomically", async () => {
+  const calls = [];
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    baseUrl: "https://api.example.test",
+    fetch: async (input, init) => {
+      const url = new URL(String(input));
+      const body = init.body ? JSON.parse(init.body) : null;
+      calls.push([init.method, url.pathname, body]);
+      if (init.method === "GET" && url.pathname === "/v1/recipes") {
+        return json({ recipes: [{
+          name: "web-video", version: 1, reference: "web-video@1",
+          description: "Web-ready", built_in: true, status: "active", sha256: "a".repeat(64),
+        }] });
+      }
+      if (init.method === "DELETE") {
+        return json({ name: "team-video", status: "archived", latest_version: 2 });
+      }
+      const version = url.pathname.endsWith("/versions") || url.pathname.endsWith("/versions/2") ? 2 : 1;
+      return json({
+        name: "team-video",
+        version,
+        reference: `team-video@${version}`,
+        description: "Team default",
+        built_in: false,
+        status: "active",
+        sha256: "b".repeat(64),
+        template: { outputs: [{
+          type: "mp4",
+          video: { bitrate_bps: 2_000_000, two_pass: true },
+          subtitles: { translate_to_english: true, max_audio_minutes: 30 },
+        }] },
+      }, init.method === "POST" ? 201 : 200);
+    },
+  });
+
+  assert.equal((await media.recipes.list())[0].reference, "web-video@1");
+  const created = await media.recipes.create({
+    name: "team-video",
+    description: "Team default",
+    template: { outputs: [{ type: "mp4", video: { bitrateBps: 2_000_000, twoPass: true } }] },
+  });
+  const second = await media.recipes.createVersion("team-video", {
+    expectedLatestVersion: 1,
+    template: { outputs: ["video.streaming"] },
+  });
+  const fetched = await media.recipes.get("team-video", { version: 2 });
+  await media.recipes.archive("team-video");
+
+  assert.equal(created.template.outputs[0].video.bitrateBps, 2_000_000);
+  assert.equal(created.template.outputs[0].video.twoPass, true);
+  assert.equal(second.version, 2);
+  assert.equal(fetched.template.outputs[0].subtitles.translateToEnglish, true);
+  assert.deepEqual(calls[1], ["POST", "/v1/recipes", {
+    name: "team-video",
+    description: "Team default",
+    template: { outputs: [{ type: "mp4", video: { bitrate_bps: 2_000_000, two_pass: true } }] },
+  }]);
+  assert.deepEqual(calls.at(-1).slice(0, 2), ["DELETE", "/v1/recipes/team-video"]);
+});
+
 test("recovers from response loss and an in-progress replay with one generated key", async () => {
   const acceptedJobs = new Map();
   const keys = [];

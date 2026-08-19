@@ -74,7 +74,21 @@ function validateCreate(params: CreateJobParams): void {
       field: "outputs",
     });
   }
-  if ((params.outputs?.length ?? 0) === 0 && params.moderation?.enabled !== true) {
+  if (params.recipe !== undefined) {
+    if (!/^[a-z][a-z0-9-]{2,63}(?:@[1-9][0-9]*)?$/.test(params.recipe)) {
+      throw new ValidationError("recipe must be a valid name or name@version", {
+        status: 400,
+        field: "recipe",
+      });
+    }
+    if ((params.outputs?.length ?? 0) > 0 || params.moderation !== undefined || params.watermark !== undefined) {
+      throw new ValidationError("recipe cannot be combined with outputs, moderation, or watermark", {
+        status: 400,
+        field: "recipe",
+      });
+    }
+  }
+  if (params.recipe === undefined && (params.outputs?.length ?? 0) === 0 && params.moderation?.enabled !== true) {
     throw new ValidationError(
       "Provide at least one output, or enable moderation for an analysis-only job",
       { status: 400, field: "outputs" },
@@ -98,6 +112,7 @@ export class Job {
   readonly tier: string;
   readonly requiredTier: string | null;
   readonly outputs: JobReceiptData["outputs"];
+  readonly recipe: JobReceiptData["recipe"];
   readonly message: string;
 
   constructor(data: JobReceiptData, jobs: JobsClient) {
@@ -107,6 +122,7 @@ export class Job {
     this.tier = data.tier;
     this.requiredTier = data.requiredTier;
     this.outputs = data.outputs;
+    this.recipe = data.recipe;
     this.message = data.message;
   }
 
@@ -125,6 +141,7 @@ export class Job {
       tier: this.tier,
       requiredTier: this.requiredTier,
       outputs: this.outputs,
+      recipe: this.recipe,
       message: this.message,
     };
   }

@@ -49,10 +49,10 @@ const result = await job.wait({ timeoutMs: 300_000 });
 - Ship types, ESM, and CommonJS from one package with no runtime dependencies.
 - Keep gateway wire names private where practical and expose JavaScript-style camelCase.
 
-### Non-goals for 0.x
+### Non-goals
 
-- Client-owned output alias resolution or hosted recipes. The SDK forwards typed alias
-  strings unchanged; the gateway owns materialization and publishes the live catalog.
+- Client-owned output alias or hosted-recipe resolution. The SDK forwards typed alias
+  strings and recipe references unchanged; the gateway owns materialization.
 - Local webhook relay, CLI commands, or synthetic event delivery.
 - Automatic webhook `event_id` deduplication; that requires the customer's datastore.
 - Browser support. The package uses Node filesystem and cryptography APIs.
@@ -102,6 +102,10 @@ MediaRuntime
 │   ├── confirm(params)
 │   └── upload(path, options)
 ├── capabilities.retrieve()
+├── recipes
+│   ├── list() / get(name, options)
+│   ├── create(params) / createVersion(name, params)
+│   └── archive(name)
 └── webhooks
     ├── verify(rawBody, headers, options)
     ├── express(handler)

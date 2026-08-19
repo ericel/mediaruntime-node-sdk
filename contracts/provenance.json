@@ -6,10 +6,10 @@
   },
   "artifacts": {
     "v1/openapi.json": {
-      "sha256": "cb3ee4701471b91dd67101a2115de9f769cf06e9762796e704c9f73ebb5fdcff"
+      "sha256": "ea2569491c43e8053d6eee325b0ed1cea7bed302c39a52dfd790e64d91cf8268"
     },
     "v1/conformance.json": {
-      "sha256": "a090c2c92ca2b6b4846e5a935db7988b40f3308bf03e8b037a30398e652d47e1"
+      "sha256": "6cb563b96784f7f082a0c5c5b9e0038ff221a00afe5e5e5daf5237d6535f1336"
     }
   }
 }

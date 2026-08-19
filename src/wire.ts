@@ -21,6 +21,7 @@ import type {
   MediaReportResult,
   Metadata,
   ModerationResult,
+  RecipeAcknowledgement,
   RetryWebhookResult,
   SubtitleOptions,
   ThumbnailOptions,
@@ -124,7 +125,7 @@ function serializeImage(value: ImageRendition): UnknownRecord {
   return output;
 }
 
-function serializeOutput(value: JobOutput | OutputAlias): UnknownRecord | OutputAlias {
+export function serializeOutput(value: JobOutput | OutputAlias): UnknownRecord | OutputAlias {
   if (typeof value === "string") return value;
   const output: UnknownRecord = { type: value.type };
   setDefined(output, "preset", value.preset);
@@ -157,6 +158,7 @@ export function serializeCreateJob(
     });
   }
   if (params.outputs !== undefined) body.outputs = params.outputs.map(serializeOutput);
+  setDefined(body, "recipe", params.recipe);
   setDefined(body, "webhook_url", params.webhookUrl);
   if (params.metadata !== undefined) body.metadata = params.metadata;
   if (params.moderation !== undefined) {
@@ -196,7 +198,27 @@ export function parseJobReceipt(value: unknown): JobReceiptData {
     tier: String(data.tier ?? ""),
     requiredTier: stringOrNull(data.required_tier),
     outputs,
+    recipe: parseRecipeAcknowledgement(data.recipe),
     message: String(data.msg ?? ""),
+  };
+}
+
+export function parseRecipeAcknowledgement(value: unknown): RecipeAcknowledgement | null {
+  if (value === null || value === undefined) return null;
+  const data = record(value);
+  const name = stringOrNull(data.name);
+  const version = numberOrNull(data.version);
+  const reference = stringOrNull(data.reference);
+  const sha256 = stringOrNull(data.sha256);
+  if (!name || version === null || !reference || !sha256) return null;
+  const requestedReference = stringOrNull(data.requested_reference);
+  return {
+    name,
+    version,
+    reference,
+    builtIn: data.built_in === true,
+    sha256,
+    ...(requestedReference ? { requestedReference } : {}),
   };
 }
 
@@ -303,6 +325,7 @@ export function parseJobDetails(value: unknown): JobDetails {
     bundle: parseBundle(data.bundle),
     media: parseMedia(data.media),
     metadata,
+    recipe: parseRecipeAcknowledgement(data.recipe),
     error: stringOrNull(data.error),
     createdAt: stringOrNull(data.created_at),
     updatedAt: stringOrNull(data.updated_at),

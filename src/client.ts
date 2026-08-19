@@ -1,5 +1,6 @@
 import { CapabilitiesClient } from "./capabilities.js";
 import { JobsClient } from "./jobs.js";
+import { RecipesClient } from "./recipes.js";
 import { Transport } from "./transport.js";
 import type { FetchImplementation, MediaRuntimeOptions } from "./types.js";
 import { UploadsClient } from "./uploads.js";
@@ -12,6 +13,7 @@ export class MediaRuntime {
   readonly jobs: JobsClient;
   readonly uploads: UploadsClient;
   readonly capabilities: CapabilitiesClient;
+  readonly recipes: RecipesClient;
   readonly watermarkLogo: WatermarkLogoClient;
   readonly webhooks: WebhooksClient;
 
@@ -40,6 +42,7 @@ export class MediaRuntime {
     this.uploads = new UploadsClient(transport);
     this.jobs = new JobsClient(transport, this.uploads);
     this.capabilities = new CapabilitiesClient(transport);
+    this.recipes = new RecipesClient(transport);
     this.watermarkLogo = new WatermarkLogoClient(transport);
     this.webhooks = new WebhooksClient(
       options.webhookSecret ?? process.env.MEDIARUNTIME_WEBHOOK_SECRET,

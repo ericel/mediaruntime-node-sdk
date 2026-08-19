@@ -109,6 +109,41 @@ export interface WatermarkOptions {
   enabled?: boolean;
 }
 
+export interface RecipeAcknowledgement {
+  name: string;
+  version: number;
+  reference: string;
+  builtIn: boolean;
+  sha256: string;
+  requestedReference?: string;
+}
+
+export interface RecipeTemplate {
+  outputs?: Array<JobOutput | OutputAlias>;
+  moderation?: ModerationOptions;
+  watermark?: WatermarkOptions;
+}
+
+export interface HostedRecipe extends RecipeAcknowledgement {
+  description: string;
+  status: "active" | "archived" | (string & {});
+  template?: RecipeTemplate;
+}
+
+export interface CreateRecipeParams {
+  name: string;
+  description?: string;
+  template: RecipeTemplate;
+  signal?: AbortSignal;
+}
+
+export interface CreateRecipeVersionParams {
+  expectedLatestVersion: number;
+  description?: string;
+  template: RecipeTemplate;
+  signal?: AbortSignal;
+}
+
 interface CreateJobCommon {
   /** Frozen gateway aliases and explicit output recipes may be mixed in one job. */
   outputs?: Array<JobOutput | OutputAlias>;
@@ -116,6 +151,8 @@ interface CreateJobCommon {
   metadata?: Metadata;
   moderation?: ModerationOptions;
   watermark?: WatermarkOptions;
+  /** Hosted processing policy, optionally pinned as name@version. */
+  recipe?: string;
   /** Caller-controlled durable key. When omitted, the SDK generates one for this invocation. */
   idempotencyKey?: string;
   signal?: AbortSignal;
@@ -149,6 +186,7 @@ export interface JobReceiptData {
     type: OutputType;
     preset: string;
   }>;
+  recipe: RecipeAcknowledgement | null;
   message: string;
 }
 
@@ -229,6 +267,7 @@ export interface JobDetails {
   bundle: JobBundle;
   media: JobMedia | null;
   metadata: Metadata;
+  recipe: RecipeAcknowledgement | null;
   error: string | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -420,6 +459,13 @@ export interface WebhookPayload {
   delivery?: WebhookDelivery;
   error?: WebhookJobError | string;
   meta?: WebhookMeta;
+  recipe?: {
+    name: string;
+    version: number;
+    reference: string;
+    built_in: boolean;
+    sha256: string;
+  };
   [key: string]: unknown;
 }
 

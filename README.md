@@ -4,7 +4,7 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable `1.1.1`. The SDK is validated against the production API from a Node.js 22
+Status: stable `1.2.0`. The SDK is validated against the production API from a Node.js 22
 Firebase Functions consumer, including job submission, terminal webhook verification,
 artifact reconciliation, and moderation persistence.
 
@@ -70,6 +70,35 @@ Aliases are frozen gateway contracts: `video.web`, `video.streaming`, `video.soc
 `audio.web`, `audio.transcription`, and `image.web`. The gateway materializes them before
 validation, estimation, billing, and persistence. Explicit `{ type, preset, ... }` output
 objects remain supported and may be mixed with aliases.
+
+## Hosted recipes
+
+Hosted recipes are immutable, account-scoped versions of a complete outputs, moderation,
+and watermark policy. They are useful when several services or teammates must run the
+same policy without copying request configuration.
+
+```ts
+const available = await media.recipes.list();
+
+const created = await media.recipes.create({
+  name: "team-video",
+  description: "Default web playback policy",
+  template: { outputs: ["video.web"] },
+});
+
+const job = await media.jobs.create({
+  source: "./launch.mp4",
+  recipe: created.reference, // team-video@1
+  metadata: { asset_id: "launch-01" },
+});
+```
+
+Use `media.recipes.get(name, { version })`, `createVersion(name, { expectedLatestVersion,
+template })`, and `archive(name)` to manage custom policies. Versions are immutable and
+optimistically locked. Built-ins `web-video@1`, `social-video@1`, and
+`ai-transcription@1` are always available. A `recipe` job cannot also supply inline
+`outputs`, `moderation`, or `watermark`; resolution happens in the gateway before
+validation, estimation, billing, idempotency, and dispatch.
 
 The production API URL is built in. Do not ask application users to configure it.
 `baseUrl` is an optional override for local gateways, staging environments, and mock

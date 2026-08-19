@@ -118,6 +118,40 @@ test("forwards every frozen output alias without SDK-side materialization", asyn
   assert.deepEqual(captured.outputs, aliases);
 });
 
+test("hosted recipe references and acknowledgement fields match the gateway contract", async () => {
+  const hosted = contract.hosted_recipes;
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_contract",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({
+        job_id: "job_recipe_contract",
+        status: "QUEUED",
+        recipe: {
+          name: "web-video",
+          version: 1,
+          reference: hosted.built_ins[0],
+          built_in: true,
+          sha256: "a".repeat(64),
+        },
+      });
+    },
+  });
+
+  const job = await media.jobs.create({
+    source: contract.canonical_requests.single.example.source,
+    recipe: hosted.built_ins[0],
+  });
+  assert.deepEqual(captured, {
+    source: contract.canonical_requests.single.example.source,
+    recipe: hosted.built_ins[0],
+  });
+  assert.deepEqual(Object.keys(job.recipe.toJSON?.() ?? job.recipe).sort(), [
+    "builtIn", "name", "reference", "sha256", "version",
+  ]);
+});
+
 test("wait recognizes every declared single and batch terminal status", async () => {
   const statuses = new Set([
     ...contract.terminal_statuses.single,
@@ -273,7 +307,7 @@ test("polling and verified webhook projections preserve declared bundle parity",
 
 test("pins owner-scoped redemption semantics", () => {
   const delivery = contract.delivery_contract;
-  assert.equal(contract.schema_version, "1.2.0");
+  assert.equal(contract.schema_version, "1.3.0");
   assert.deepEqual(delivery.redemption.required_token_claims, [
     "account_id",
     "job_id",
