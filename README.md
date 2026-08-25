@@ -126,6 +126,201 @@ const batch = await media.jobs.create({
 });
 ```
 
+## Animated WebP and APNG
+
+Animated images use `type: "image"` with a timeline-specific Premium preset. Controls are
+bounded by the gateway; `loop: 0` repeats forever and `quality` applies only to WebP.
+
+```ts
+const animation = await media.jobs.create({
+  source: "./launch.mp4",
+  outputs: [{
+    type: "image",
+    preset: "image_animated_webp_v1",
+    animation: {
+      width: 720,
+      fps: 15,
+      startTime: 0,
+      duration: 6,
+      loop: 0,
+      quality: 80,
+    },
+  }],
+});
+```
+
+Use `image_animated_apng_v1` for lossless animated PNG. Watermarking these animation
+presets is rejected until that combination is explicitly supported.
+
+## BlurHash, ThumbHash, and LQIP
+
+Create portable loading placeholders from an image or a selected video frame with one
+Standard-tier output. The bundle contains `placeholders.json` with BlurHash and
+base64-encoded ThumbHash values plus a bounded `lqip.webp` file.
+
+```ts
+const placeholders = await media.jobs.create({
+  source: "./product-photo.png",
+  outputs: [{
+    type: "image",
+    preset: "image_placeholders_v1",
+    placeholders: {
+      maxDimension: 32,
+      sourceTimeSec: 0,
+      lqipQuality: 50,
+      lqipMaxBytes: 4096,
+    },
+  }],
+});
+```
+
+The JSON also records explicit source and placeholder dimensions, source format, the
+requested frame time, and a deterministic alpha-aware dominant colour. For video or
+animated images, `sourceTimeSec` defaults to the first frame at `0`; it does not select a
+representative frame automatically.
+
+`maxDimension` is bounded to 8–100 pixels and `lqipMaxBytes` to 256–16384 bytes.
+The job fails instead of silently exceeding the requested LQIP byte ceiling.
+Watermarking this preset is rejected.
+
+## Composite video contact sheets
+
+Create bounded review grids from a video with the Standard-tier `contact_sheet_v1`
+preset. The ZIP contains numbered images and `contact_sheet.json`, which maps every tile
+to its exact source timestamp.
+
+```ts
+const sheets = await media.jobs.create({
+  source: "./interview.mp4",
+  outputs: [{
+    type: "frames",
+    preset: "contact_sheet_v1",
+    contactSheet: {
+      columns: 5,
+      rows: 4,
+      tileWidth: 240,
+      tileHeight: 135,
+      intervalSec: 12,
+      startTimeSec: 0,
+      durationSec: 0, // remaining video
+      maxSheets: 3,
+      format: "jpg",
+      quality: 80,
+    },
+  }],
+});
+```
+
+Billing is one flat processing unit per produced composite sheet. Watermarking this
+preset is rejected; each numbered sheet is a primary deliverable in the canonical ZIP.
+`quality` applies to JPG and WebP; PNG is lossless.
+
+## Audiograms
+
+Compose a timed audio track, supplied artwork, a generated waveform, and optional supplied
+captions with the Premium `audiogram_v1` preset:
+
+```ts
+const job = await media.jobs.create({
+  source: "./episode.mp3",
+  outputs: [{
+    type: "social",
+    preset: "audiogram_v1",
+    audiogram: {
+      artworkSource: "https://cdn.example.com/podcast/cover.png",
+      captionsSource: "https://cdn.example.com/podcast/episode.vtt",
+      burnCaptions: true,
+      layout: "square",
+      artworkFit: "blurred_background",
+      backgroundColor: "#101827",
+      waveformColor: "#5B5CFF",
+      waveformGain: 2,
+      captionPosition: "bottom",
+      captionFontScale: 1,
+      normalizeAudio: true,
+      loudnessTargetLufs: -16,
+      durationSec: 60,
+      fps: 30,
+    },
+  }],
+});
+```
+
+Artwork must be PNG, JPEG, or WebP up to 10 MB; captions must be UTF-8 SRT or VTT up to
+2 MB. Artwork can be contained, covered, or preserved over a blurred fill. Waveforms and
+captions use separate regions in a reserved high-contrast safe band; `top` and `bottom`
+select the caption strip and never place text over caller artwork. Multi-line cues scale down
+adaptively, and the caption-free poster is sampled after waveform activity begins. Loudness
+normalization is optional and reports its target plus measured input/output values. The
+ZIP contains `audiogram.mp4`, a caption-free `poster.jpg`, `audiogram.json`, and
+`audiogram.waveform.json`. Account watermarking and speech-generated subtitles cannot be
+combined with this preset in v1.
+
+For JPG and WebP renditions, `maxBytes` is a hard final-file ceiling. MediaRuntime searches
+between `quality` and `minQuality`, verifies the encoded file on disk, and fails the job
+instead of returning an oversized artifact:
+
+```ts
+const job = await media.jobs.create({
+  source: "https://cdn.example.com/photo.jpg",
+  outputs: [{
+    type: "image",
+    preset: "image_multi_v1",
+    images: [{
+      width: 1280,
+      height: 720,
+      mode: "cover",
+      format: "webp",
+      quality: 86,
+      maxBytes: 200_000,
+      minQuality: 35,
+    }],
+  }],
+});
+```
+
+The bundle includes `image_size_limits.json` with the selected quality, final byte count,
+and bounded attempt history. PNG and AVIF do not currently accept `maxBytes`.
+
+## Privacy redaction
+
+Privacy redaction is an explicit Premium Preview for still-image inputs and image outputs.
+Video and animated-image requests are rejected before billing and execution.
+
+```ts
+const job = await media.jobs.create({
+  source: "./team-photo.jpg",
+  outputs: [{
+    type: "image",
+    preset: "image_multi_v1",
+    images: [{ width: 1280, height: 720, mode: "fit", format: "png", quality: 80 }],
+    privacyRedaction: {
+      detectors: ["face", "license_plate", "text"],
+      style: "blur",
+      failureMode: "fail_closed",
+      minConfidence: 0.65,
+      sampleIntervalSec: 0.2,
+      maxFrames: 1800,
+      boxPaddingRatio: 0.15,
+      privacyStrength: "strong",
+      pixelBlockSize: 24,
+      includeDebugObservations: false,
+    },
+  }],
+});
+```
+
+Use `report_only` only when an unsafe or incomplete image is acceptable for review.
+`fail_closed` stops on detector failure, unresolved ambiguity, bounded-limit truncation,
+or a residual that remediation cannot eliminate. Recognizable residuals under blur or
+pixelation may be escalated to bounded opaque masks and verified again. The ZIP includes
+the redacted image and `privacy_redaction.json` schema v3. Public metadata reports stable
+detector categories, counts, verification outcomes, and ZIP-relative `report_bundle_path`
+and `output_bundle_paths`; it does not expose detector vendors, model identities, model or
+worker paths, bucket names, or raw OCR text. Automated recall is not exhaustive, so
+`coverage_verified` remains false and human review is required. Opt into
+`includeDebugObservations` only when per-sample boxes are needed.
+
 ## Moderation
 
 Choose observational `report` moderation or fail-closed `block` enforcement when creating
@@ -147,6 +342,41 @@ const result = await job.wait();
 const moderation = await media.jobs.getModeration(result.id);
 console.log(moderation.verdict, moderation.flaggedChecks);
 ```
+
+For an actionable, versioned delivery verdict, request the compatibility sidecar and read
+it directly after completion (it also remains in the ZIP bundle):
+
+```ts
+const job = await media.jobs.create({
+  source: "https://cdn.example.com/video.webm",
+  outputs: [{ type: "image", preset: "compatibility_report_v1" }],
+});
+const result = await job.wait();
+const compatibility = await media.jobs.getCompatibilityReport(result.id);
+console.log(compatibility.report?.profiles);
+```
+
+The five named profiles are conservative, versioned guidance rather than exhaustive
+certification of every browser, device, editor, or social platform version.
+
+To scan QR codes and barcodes in an image, video/animation, or embedded audio cover
+artwork, use the bounded analysis preset and read the result directly:
+
+```ts
+const job = await media.jobs.create({
+  source: "/srv/media/poster-with-qr.png",
+  outputs: [{ type: "frames", preset: "code_detect_v1" }],
+});
+const result = await job.wait();
+const codes = await media.jobs.getCodeDetections(result.id);
+
+// Attacker-controlled data: render as text, never HTML, and do not auto-open URLs.
+console.log(codes.report?.detections?.map((item) => item.decoded_text));
+```
+
+Audio is accepted only when it contains embedded cover artwork. The scan is capped at 12
+frames from the opening 110 seconds and 16 unique codes per frame, and costs a flat two
+processing units.
 
 Explicit outputs include MPEG-DASH and VP9/WebM:
 

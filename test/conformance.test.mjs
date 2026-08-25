@@ -64,6 +64,16 @@ test("checked-in OpenAPI advertises the canonical source spelling", () => {
   assert.deepEqual(new Set(schemas.OutputType.enum), new Set([
     "mp4", "webm", "hls", "dash", "audio", "image", "social", "gif", "frames",
   ]));
+  assert.ok(schemas.TranscodeOutput.properties.contact_sheet);
+  assert.deepEqual(schemas.ContactSheetFormat.enum, ["jpg", "png", "webp"]);
+  assert.equal(schemas.ContactSheetConfig.properties.max_sheets.maximum, 20);
+  assert.equal(schemas.ImageRendition.properties.max_bytes.anyOf[0].minimum, 256);
+  assert.equal(schemas.ImageRendition.properties.max_bytes.anyOf[0].maximum, 100_000_000);
+  assert.equal(schemas.ImageRendition.properties.min_quality.minimum, 1);
+  assert.equal(schemas.ImageRendition.properties.min_quality.maximum, 100);
+  assert.ok(schemas.TranscodeOutput.properties.privacy_redaction);
+  assert.deepEqual(schemas.PrivacyDetector.enum, ["face", "license_plate", "text"]);
+  assert.equal(schemas.PrivacyRedactionConfig.properties.max_frames.maximum, 18000);
   assert.equal(contract.compatibility.canonical_source_field, "source");
   assert.equal(contract.compatibility.accepted_legacy_source_field, "file_url");
 });

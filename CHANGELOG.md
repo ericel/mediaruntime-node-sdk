@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Add typed `privacyRedaction` controls for the Premium still-image Preview; video and
+  animated-image redaction remain unavailable and are rejected by the gateway and engine.
+- Document the stable public privacy-report boundary: detector categories and outcomes,
+  ZIP-relative paths, and no vendor/model or private infrastructure metadata.
+- Add typed Audiogram artwork-fit, waveform-gain, safe-caption, and optional loudness
+  normalization controls; document the caption-free poster and complete bundle inventory.
+- Add typed `jobs.getCompatibilityReport()` access to the versioned
+  `compatibility_report_v1` sidecar.
+- Add typed `jobs.getCodeDetections()` access to the bounded `code_detect_v1` report;
+  decoded payloads are explicitly untrusted text.
+- Add typed `contactSheet` controls for the public `contact_sheet_v1` frames preset.
+- Serialize contact-sheet geometry, sampling, format, and quality to the gateway's
+  `contact_sheet` request object and parse the same fields in hosted recipes.
+
 ## 1.2.0 — 2026-08-19
 
 - Add `media.recipes` management for immutable account-scoped hosted recipes.

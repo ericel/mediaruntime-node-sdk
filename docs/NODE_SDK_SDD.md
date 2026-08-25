@@ -93,6 +93,7 @@ MediaRuntime
 │   ├── wait(jobId, options) -> JobDetails
 │   ├── getModeration(jobId)
 │   ├── getMediaReport(jobId)
+│   ├── getCompatibilityReport(jobId)
 │   └── retryWebhook(jobId)
 ├── uploads
 │   ├── createTarget(filename, contentType)
@@ -137,6 +138,13 @@ output.removeBg              -> remove_bg
 output.smartCrop             -> smart_crop
 output.posterTimeSec         -> poster_time_sec
 output.posterFormat          -> poster_format
+output.contactSheet          -> contact_sheet
+output.contactSheet.tileWidth     -> contact_sheet.tile_width
+output.contactSheet.tileHeight    -> contact_sheet.tile_height
+output.contactSheet.intervalSec   -> contact_sheet.interval_sec
+output.contactSheet.startTimeSec  -> contact_sheet.start_time_sec
+output.contactSheet.durationSec   -> contact_sheet.duration_sec
+output.contactSheet.maxSheets     -> contact_sheet.max_sheets
 ```
 
 Nested first-party option fields are mapped explicitly. `metadata` and input metadata are
@@ -289,7 +297,7 @@ signed webhook payloads; they remain separate from ordinary package tests.
 - Transport, retry policy, typed errors.
 - Job create/get/list/wait and job resource.
 - Transparent local-file upload.
-- Capabilities, moderation, media-report, and manual webhook retry methods.
+- Capabilities, moderation, media-report, compatibility-report, and manual webhook retry methods.
 - Low-level webhook verification and Express adapter.
 - Watermark-logo upload/confirm helper.
 - Unit tests and quickstart.
@@ -334,7 +342,7 @@ Implemented in this repository:
 - authenticated transport, deadlines, conservative retries, and typed API errors;
 - invocation-scoped idempotency for safe submit retries without weakening durable caller
   keys;
-- job create/get/list/wait, moderation, media-report, and manual webhook-retry methods;
+- job create/get/list/wait, moderation, media-report, compatibility-report, and manual webhook-retry methods;
 - ergonomic `source` mapping plus transparent local and batch-input uploads;
 - capabilities client and watermark-logo upload/confirm workflow;
 - typed frozen aliases, gateway-resolved output receipts, and capabilities discovery;

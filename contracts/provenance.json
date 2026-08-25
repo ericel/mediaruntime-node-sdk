@@ -6,7 +6,7 @@
   },
   "artifacts": {
     "v1/openapi.json": {
-      "sha256": "ea2569491c43e8053d6eee325b0ed1cea7bed302c39a52dfd790e64d91cf8268"
+      "sha256": "8f481cf58962e20ad7c89c68ebd9396bdda25bf8e398f64510344b08ab9e19fe"
     },
     "v1/conformance.json": {
       "sha256": "6cb563b96784f7f082a0c5c5b9e0038ff221a00afe5e5e5daf5237d6535f1336"

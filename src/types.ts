@@ -75,12 +75,78 @@ export interface GifPreviewOptions {
   duration?: number;
 }
 
+export interface AnimationOptions {
+  width?: number;
+  fps?: number;
+  startTime?: number;
+  duration?: number;
+  loop?: number;
+  quality?: number;
+}
+
+export interface PlaceholderOptions {
+  maxDimension?: number;
+  sourceTimeSec?: number;
+  lqipQuality?: number;
+  lqipMaxBytes?: number;
+}
+
+export interface ContactSheetOptions {
+  columns?: number;
+  rows?: number;
+  tileWidth?: number;
+  tileHeight?: number;
+  intervalSec?: number;
+  startTimeSec?: number;
+  durationSec?: number;
+  maxSheets?: number;
+  format?: "jpg" | "png" | "webp";
+  quality?: number;
+}
+
+export interface AudiogramOptions {
+  artworkSource: string;
+  captionsSource?: string;
+  layout?: "square" | "portrait" | "landscape";
+  artworkFit?: "contain" | "cover" | "blurred_background";
+  backgroundColor?: string;
+  waveformColor?: string;
+  waveformGain?: number;
+  startTimeSec?: number;
+  durationSec?: number;
+  fps?: number;
+  burnCaptions?: boolean;
+  captionPosition?: "top" | "bottom";
+  captionFontScale?: number;
+  normalizeAudio?: boolean;
+  loudnessTargetLufs?: number;
+}
+
+export interface PrivacyRedactionOptions {
+  /** Premium Preview for still-image inputs attached to image outputs only. */
+  detectors: Array<"face" | "license_plate" | "text">;
+  style?: "blur" | "pixelate" | "solid";
+  failureMode?: "fail_closed" | "report_only";
+  minConfidence?: number;
+  sampleIntervalSec?: number;
+  maxFrames?: number;
+  boxPaddingRatio?: number;
+  solidColor?: string;
+  pixelBlockSize?: number;
+  privacyStrength?: "standard" | "strong";
+  includeDebugObservations?: boolean;
+}
+
 export interface ImageRendition {
   width: number;
   height: number;
   mode?: string;
   format: ImageFormat;
   quality?: number;
+  /** Hard final-file ceiling for JPG/WebP. The job fails if the limit cannot be met. */
+  maxBytes?: number;
+  /** Lowest quality the bounded search may select. Requires maxBytes. */
+  minQuality?: number;
 }
 
 export interface JobOutput {
@@ -94,6 +160,11 @@ export interface JobOutput {
   thumbnails?: ThumbnailOptions;
   subtitles?: SubtitleOptions;
   gifPreview?: GifPreviewOptions;
+  animation?: AnimationOptions;
+  placeholders?: PlaceholderOptions;
+  contactSheet?: ContactSheetOptions;
+  audiogram?: AudiogramOptions;
+  privacyRedaction?: PrivacyRedactionOptions;
   images?: ImageRendition[];
   posterTimeSec?: number;
   posterFormat?: ImageFormat;
@@ -333,6 +404,44 @@ export interface ModerationResult {
 export interface MediaReportResult {
   jobId: string;
   report: Record<string, unknown> | null;
+  downloadUrl: string | null;
+  note: string | null;
+}
+
+export interface CompatibilityReportResult {
+  jobId: string;
+  report: Record<string, unknown> | null;
+  downloadUrl: string | null;
+  note: string | null;
+}
+
+export interface CodeDetectionReport {
+  schema_version?: number;
+  payload_is_untrusted?: true;
+  code_count?: number;
+  detections?: Array<{
+    symbology?: string;
+    decoded_text?: string;
+    timestamp_sec?: number;
+    bounding_polygon?: Array<{ x: number; y: number }>;
+    confidence?: number | null;
+    evidence_file?: string;
+    evidence_bundle_path?: string;
+    [key: string]: unknown;
+  }>;
+  evidence_frames?: Array<Record<string, unknown>>;
+  sampling?: Record<string, unknown>;
+  security?: {
+    render_as_text?: true;
+    follow_decoded_urls_automatically?: false;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface CodeDetectionResult {
+  jobId: string;
+  report: CodeDetectionReport | null;
   downloadUrl: string | null;
   note: string | null;
 }

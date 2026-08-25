@@ -32,9 +32,11 @@ const CONTENT_TYPES: Record<string, string> = {
   ".ogg": "audio/ogg",
   ".opus": "audio/opus",
   ".png": "image/png",
+  ".srt": "application/x-subrip",
   ".wav": "audio/wav",
   ".webm": "video/webm",
   ".webp": "image/webp",
+  ".vtt": "text/vtt",
 };
 
 function inferContentType(path: string): string {

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { JobWaitTimeoutError, ValidationError } from "./errors.js";
 import type {
   CreateJobParams,
+  CompatibilityReportResult,
+  CodeDetectionResult,
   JobDetails,
   JobPage,
   JobReceiptData,
@@ -17,6 +19,8 @@ import {
   parseJobDetails,
   parseJobPage,
   parseJobReceipt,
+  parseCompatibilityReport,
+  parseCodeDetections,
   parseMediaReport,
   parseModeration,
   parseRetryWebhook,
@@ -256,6 +260,32 @@ export class JobsClient {
       signal: options.signal,
     });
     return parseMediaReport(value);
+  }
+
+  async getCompatibilityReport(
+    jobId: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<CompatibilityReportResult> {
+    const value = await this.#transport.request<unknown>({
+      method: "GET",
+      path: `/jobs/${jobPathId(jobId)}/compatibility-report`,
+      retry: "safe",
+      signal: options.signal,
+    });
+    return parseCompatibilityReport(value);
+  }
+
+  async getCodeDetections(
+    jobId: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<CodeDetectionResult> {
+    const value = await this.#transport.request<unknown>({
+      method: "GET",
+      path: `/jobs/${jobPathId(jobId)}/codes`,
+      retry: "safe",
+      signal: options.signal,
+    });
+    return parseCodeDetections(value);
   }
 
   async retryWebhook(

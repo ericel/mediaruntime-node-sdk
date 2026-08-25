@@ -104,6 +104,59 @@ function parseOutput(value: unknown): JobOutput | OutputAlias {
       ...(gif.duration !== undefined ? { duration: Number(gif.duration) } : {}),
     };
   }
+  if (data.animation !== undefined) {
+    const animation = record(data.animation);
+    output.animation = {
+      ...(animation.width !== undefined ? { width: Number(animation.width) } : {}),
+      ...(animation.fps !== undefined ? { fps: Number(animation.fps) } : {}),
+      ...(animation.start_time !== undefined ? { startTime: Number(animation.start_time) } : {}),
+      ...(animation.duration !== undefined ? { duration: Number(animation.duration) } : {}),
+      ...(animation.loop !== undefined ? { loop: Number(animation.loop) } : {}),
+      ...(animation.quality !== undefined ? { quality: Number(animation.quality) } : {}),
+    };
+  }
+  if (data.placeholders !== undefined) {
+    const placeholders = record(data.placeholders);
+    output.placeholders = {
+      ...(placeholders.max_dimension !== undefined ? { maxDimension: Number(placeholders.max_dimension) } : {}),
+      ...(placeholders.source_time_sec !== undefined ? { sourceTimeSec: Number(placeholders.source_time_sec) } : {}),
+      ...(placeholders.lqip_quality !== undefined ? { lqipQuality: Number(placeholders.lqip_quality) } : {}),
+      ...(placeholders.lqip_max_bytes !== undefined ? { lqipMaxBytes: Number(placeholders.lqip_max_bytes) } : {}),
+    };
+  }
+  if (data.contact_sheet !== undefined) {
+    const contactSheet = record(data.contact_sheet);
+    output.contactSheet = {
+      ...(contactSheet.columns !== undefined ? { columns: Number(contactSheet.columns) } : {}),
+      ...(contactSheet.rows !== undefined ? { rows: Number(contactSheet.rows) } : {}),
+      ...(contactSheet.tile_width !== undefined ? { tileWidth: Number(contactSheet.tile_width) } : {}),
+      ...(contactSheet.tile_height !== undefined ? { tileHeight: Number(contactSheet.tile_height) } : {}),
+      ...(contactSheet.interval_sec !== undefined ? { intervalSec: Number(contactSheet.interval_sec) } : {}),
+      ...(contactSheet.start_time_sec !== undefined ? { startTimeSec: Number(contactSheet.start_time_sec) } : {}),
+      ...(contactSheet.duration_sec !== undefined ? { durationSec: Number(contactSheet.duration_sec) } : {}),
+      ...(contactSheet.max_sheets !== undefined ? { maxSheets: Number(contactSheet.max_sheets) } : {}),
+      ...(contactSheet.format !== undefined ? { format: String(contactSheet.format) as NonNullable<JobOutput["contactSheet"]>["format"] } : {}),
+      ...(contactSheet.quality !== undefined ? { quality: Number(contactSheet.quality) } : {}),
+    };
+  }
+  if (data.privacy_redaction !== undefined) {
+    const privacy = record(data.privacy_redaction);
+    output.privacyRedaction = {
+      detectors: Array.isArray(privacy.detectors)
+        ? privacy.detectors.map(String) as NonNullable<JobOutput["privacyRedaction"]>["detectors"]
+        : [],
+      ...(privacy.style !== undefined ? { style: String(privacy.style) as NonNullable<JobOutput["privacyRedaction"]>["style"] } : {}),
+      ...(privacy.failure_mode !== undefined ? { failureMode: String(privacy.failure_mode) as NonNullable<JobOutput["privacyRedaction"]>["failureMode"] } : {}),
+      ...(privacy.min_confidence !== undefined ? { minConfidence: Number(privacy.min_confidence) } : {}),
+      ...(privacy.sample_interval_sec !== undefined ? { sampleIntervalSec: Number(privacy.sample_interval_sec) } : {}),
+      ...(privacy.max_frames !== undefined ? { maxFrames: Number(privacy.max_frames) } : {}),
+      ...(privacy.box_padding_ratio !== undefined ? { boxPaddingRatio: Number(privacy.box_padding_ratio) } : {}),
+      ...(privacy.solid_color !== undefined ? { solidColor: String(privacy.solid_color) } : {}),
+      ...(privacy.pixel_block_size !== undefined ? { pixelBlockSize: Number(privacy.pixel_block_size) } : {}),
+      ...(privacy.privacy_strength !== undefined ? { privacyStrength: String(privacy.privacy_strength) as "standard" | "strong" } : {}),
+      ...(privacy.include_debug_observations !== undefined ? { includeDebugObservations: Boolean(privacy.include_debug_observations) } : {}),
+    };
+  }
   if (Array.isArray(data.images)) {
     output.images = data.images.map((value) => {
       const image = record(value);

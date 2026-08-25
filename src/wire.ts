@@ -1,5 +1,10 @@
 import type {
   BatchInput,
+  AnimationOptions,
+  AudiogramOptions,
+  ContactSheetOptions,
+  PlaceholderOptions,
+  PrivacyRedactionOptions,
   Capabilities,
   CreateJobParams,
   GifPreviewOptions,
@@ -19,6 +24,8 @@ import type {
   JobTier,
   JobUsage,
   MediaReportResult,
+  CompatibilityReportResult,
+  CodeDetectionResult,
   Metadata,
   ModerationResult,
   RecipeAcknowledgement,
@@ -122,6 +129,77 @@ function serializeImage(value: ImageRendition): UnknownRecord {
   };
   setDefined(output, "mode", value.mode);
   setDefined(output, "quality", value.quality);
+  setDefined(output, "max_bytes", value.maxBytes);
+  setDefined(output, "min_quality", value.minQuality);
+  return output;
+}
+
+function serializeAnimation(value: AnimationOptions): UnknownRecord {
+  const output: UnknownRecord = {};
+  setDefined(output, "width", value.width);
+  setDefined(output, "fps", value.fps);
+  setDefined(output, "start_time", value.startTime);
+  setDefined(output, "duration", value.duration);
+  setDefined(output, "loop", value.loop);
+  setDefined(output, "quality", value.quality);
+  return output;
+}
+
+function serializePlaceholders(value: PlaceholderOptions): UnknownRecord {
+  const output: UnknownRecord = {};
+  setDefined(output, "max_dimension", value.maxDimension);
+  setDefined(output, "source_time_sec", value.sourceTimeSec);
+  setDefined(output, "lqip_quality", value.lqipQuality);
+  setDefined(output, "lqip_max_bytes", value.lqipMaxBytes);
+  return output;
+}
+
+function serializeContactSheet(value: ContactSheetOptions): UnknownRecord {
+  const output: UnknownRecord = {};
+  setDefined(output, "columns", value.columns);
+  setDefined(output, "rows", value.rows);
+  setDefined(output, "tile_width", value.tileWidth);
+  setDefined(output, "tile_height", value.tileHeight);
+  setDefined(output, "interval_sec", value.intervalSec);
+  setDefined(output, "start_time_sec", value.startTimeSec);
+  setDefined(output, "duration_sec", value.durationSec);
+  setDefined(output, "max_sheets", value.maxSheets);
+  setDefined(output, "format", value.format);
+  setDefined(output, "quality", value.quality);
+  return output;
+}
+
+function serializeAudiogram(value: AudiogramOptions): UnknownRecord {
+  const output: UnknownRecord = { artwork_source: value.artworkSource };
+  setDefined(output, "captions_source", value.captionsSource);
+  setDefined(output, "layout", value.layout);
+  setDefined(output, "artwork_fit", value.artworkFit);
+  setDefined(output, "background_color", value.backgroundColor);
+  setDefined(output, "waveform_color", value.waveformColor);
+  setDefined(output, "waveform_gain", value.waveformGain);
+  setDefined(output, "start_time_sec", value.startTimeSec);
+  setDefined(output, "duration_sec", value.durationSec);
+  setDefined(output, "fps", value.fps);
+  setDefined(output, "burn_captions", value.burnCaptions);
+  setDefined(output, "caption_position", value.captionPosition);
+  setDefined(output, "caption_font_scale", value.captionFontScale);
+  setDefined(output, "normalize_audio", value.normalizeAudio);
+  setDefined(output, "loudness_target_lufs", value.loudnessTargetLufs);
+  return output;
+}
+
+function serializePrivacyRedaction(value: PrivacyRedactionOptions): UnknownRecord {
+  const output: UnknownRecord = { detectors: value.detectors };
+  setDefined(output, "style", value.style);
+  setDefined(output, "failure_mode", value.failureMode);
+  setDefined(output, "min_confidence", value.minConfidence);
+  setDefined(output, "sample_interval_sec", value.sampleIntervalSec);
+  setDefined(output, "max_frames", value.maxFrames);
+  setDefined(output, "box_padding_ratio", value.boxPaddingRatio);
+  setDefined(output, "solid_color", value.solidColor);
+  setDefined(output, "pixel_block_size", value.pixelBlockSize);
+  setDefined(output, "privacy_strength", value.privacyStrength);
+  setDefined(output, "include_debug_observations", value.includeDebugObservations);
   return output;
 }
 
@@ -137,6 +215,11 @@ export function serializeOutput(value: JobOutput | OutputAlias): UnknownRecord |
   if (value.thumbnails) output.thumbnails = serializeThumbnails(value.thumbnails);
   if (value.subtitles) output.subtitles = serializeSubtitles(value.subtitles);
   if (value.gifPreview) output.gif_preview = serializeGifPreview(value.gifPreview);
+  if (value.animation) output.animation = serializeAnimation(value.animation);
+  if (value.placeholders) output.placeholders = serializePlaceholders(value.placeholders);
+  if (value.contactSheet) output.contact_sheet = serializeContactSheet(value.contactSheet);
+  if (value.audiogram) output.audiogram = serializeAudiogram(value.audiogram);
+  if (value.privacyRedaction) output.privacy_redaction = serializePrivacyRedaction(value.privacyRedaction);
   if (value.images) output.images = value.images.map(serializeImage);
   setDefined(output, "poster_time_sec", value.posterTimeSec);
   setDefined(output, "poster_format", value.posterFormat);
@@ -405,6 +488,34 @@ export function parseMediaReport(value: unknown): MediaReportResult {
     report:
       reportValue !== null && typeof reportValue === "object" && !Array.isArray(reportValue)
         ? (reportValue as Record<string, unknown>)
+        : null,
+    downloadUrl: stringOrNull(data.download_url),
+    note: stringOrNull(data.note),
+  };
+}
+
+export function parseCompatibilityReport(value: unknown): CompatibilityReportResult {
+  const data = record(value);
+  const reportValue = data.report;
+  return {
+    jobId: String(data.job_id ?? ""),
+    report:
+      reportValue !== null && typeof reportValue === "object" && !Array.isArray(reportValue)
+        ? (reportValue as Record<string, unknown>)
+        : null,
+    downloadUrl: stringOrNull(data.download_url),
+    note: stringOrNull(data.note),
+  };
+}
+
+export function parseCodeDetections(value: unknown): CodeDetectionResult {
+  const data = record(value);
+  const reportValue = data.report;
+  return {
+    jobId: String(data.job_id ?? ""),
+    report:
+      reportValue !== null && typeof reportValue === "object" && !Array.isArray(reportValue)
+        ? (reportValue as CodeDetectionResult["report"])
         : null,
     downloadUrl: stringOrNull(data.download_url),
     note: stringOrNull(data.note),

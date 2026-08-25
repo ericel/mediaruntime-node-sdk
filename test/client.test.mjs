@@ -101,6 +101,256 @@ test("maps ergonomic create input to the current gateway contract without changi
   });
 });
 
+test("serializes animated image controls to the gateway wire contract", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({ job_id: "job_animation", status: "queued", tier: "premium", msg: "accepted" });
+    },
+  });
+
+  await media.jobs.create({
+    source: "https://cdn.example.test/clip.mp4",
+    outputs: [{
+      type: "image",
+      preset: "image_animated_webp_v1",
+      animation: {
+        width: 720,
+        fps: 15,
+        startTime: 1,
+        duration: 6,
+        loop: 0,
+        quality: 80,
+      },
+    }],
+  });
+
+  assert.deepEqual(captured.outputs[0].animation, {
+    width: 720,
+    fps: 15,
+    start_time: 1,
+    duration: 6,
+    loop: 0,
+    quality: 80,
+  });
+});
+
+test("serializes portable placeholder controls to the gateway wire contract", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({ job_id: "job_placeholders", status: "queued", tier: "standard", msg: "accepted" });
+    },
+  });
+
+  await media.jobs.create({
+    source: "https://cdn.example.test/poster.png",
+    outputs: [{
+      type: "image",
+      preset: "image_placeholders_v1",
+      placeholders: {
+        maxDimension: 48,
+        sourceTimeSec: 1.25,
+        lqipQuality: 42,
+        lqipMaxBytes: 2048,
+      },
+    }],
+  });
+
+  assert.deepEqual(captured.outputs[0].placeholders, {
+    max_dimension: 48,
+    source_time_sec: 1.25,
+    lqip_quality: 42,
+    lqip_max_bytes: 2048,
+  });
+});
+
+test("serializes hard JPG/WebP rendition byte ceilings", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({ job_id: "job_exact_image_size", status: "queued", tier: "standard", msg: "accepted" });
+    },
+  });
+
+  await media.jobs.create({
+    source: "https://cdn.example.test/poster.png",
+    outputs: [{
+      type: "image",
+      preset: "image_multi_v1",
+      images: [{
+        width: 1280,
+        height: 720,
+        mode: "cover",
+        format: "webp",
+        quality: 86,
+        maxBytes: 200000,
+        minQuality: 35,
+      }],
+    }],
+  });
+
+  assert.deepEqual(captured.outputs[0].images, [{
+    width: 1280,
+    height: 720,
+    mode: "cover",
+    format: "webp",
+    quality: 86,
+    max_bytes: 200000,
+    min_quality: 35,
+  }]);
+});
+
+test("serializes contact-sheet controls to the gateway wire contract", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({ job_id: "job_contact_sheet", status: "queued", tier: "standard", msg: "accepted" });
+    },
+  });
+
+  await media.jobs.create({
+    source: "https://cdn.example.test/clip.mp4",
+    outputs: [{
+      type: "frames",
+      preset: "contact_sheet_v1",
+      contactSheet: {
+        columns: 5,
+        rows: 4,
+        tileWidth: 240,
+        tileHeight: 135,
+        intervalSec: 12,
+        startTimeSec: 3,
+        durationSec: 120,
+        maxSheets: 3,
+        format: "webp",
+        quality: 76,
+      },
+    }],
+  });
+
+  assert.deepEqual(captured.outputs[0].contact_sheet, {
+    columns: 5,
+    rows: 4,
+    tile_width: 240,
+    tile_height: 135,
+    interval_sec: 12,
+    start_time_sec: 3,
+    duration_sec: 120,
+    max_sheets: 3,
+    format: "webp",
+    quality: 76,
+  });
+});
+
+test("serializes audiogram asset and composition controls to the gateway wire contract", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({ job_id: "job_audiogram", status: "queued", tier: "premium", msg: "accepted" });
+    },
+  });
+
+  await media.jobs.create({
+    source: "https://cdn.example.test/episode.mp3",
+    outputs: [{
+      type: "social",
+      preset: "audiogram_v1",
+      audiogram: {
+        artworkSource: "https://cdn.example.test/cover.png",
+        captionsSource: "https://cdn.example.test/captions.vtt",
+        layout: "portrait",
+        artworkFit: "blurred_background",
+        backgroundColor: "#102030",
+        waveformColor: "#abcdef",
+        waveformGain: 2.5,
+        startTimeSec: 2,
+        durationSec: 45,
+        fps: 24,
+        burnCaptions: true,
+        captionPosition: "bottom",
+        captionFontScale: 1.1,
+        normalizeAudio: true,
+        loudnessTargetLufs: -18,
+      },
+    }],
+  });
+
+  assert.deepEqual(captured.outputs[0].audiogram, {
+    artwork_source: "https://cdn.example.test/cover.png",
+    captions_source: "https://cdn.example.test/captions.vtt",
+    layout: "portrait",
+    artwork_fit: "blurred_background",
+    background_color: "#102030",
+    waveform_color: "#abcdef",
+    waveform_gain: 2.5,
+    start_time_sec: 2,
+    duration_sec: 45,
+    fps: 24,
+    burn_captions: true,
+    caption_position: "bottom",
+    caption_font_scale: 1.1,
+    normalize_audio: true,
+    loudness_target_lufs: -18,
+  });
+});
+
+test("serializes bounded privacy-redaction controls to the gateway wire contract", async () => {
+  let captured;
+  const media = new MediaRuntime({
+    apiKey: "sk_test",
+    fetch: async (_input, init) => {
+      captured = JSON.parse(init.body);
+      return json({ job_id: "job_privacy", status: "queued", tier: "premium", msg: "accepted" });
+    },
+  });
+
+  await media.jobs.create({
+    source: "https://cdn.example.test/people.mp4",
+    outputs: [{
+      type: "mp4",
+      preset: "mp4_720p_h264_aac",
+      privacyRedaction: {
+        detectors: ["face", "license_plate", "text"],
+        style: "pixelate",
+        failureMode: "fail_closed",
+        minConfidence: 0.72,
+        sampleIntervalSec: 1.5,
+        maxFrames: 24,
+        boxPaddingRatio: 0.2,
+        solidColor: "#102030",
+        pixelBlockSize: 32,
+        privacyStrength: "strong",
+        includeDebugObservations: true,
+      },
+    }],
+  });
+
+  assert.deepEqual(captured.outputs[0].privacy_redaction, {
+    detectors: ["face", "license_plate", "text"],
+    style: "pixelate",
+    failure_mode: "fail_closed",
+    min_confidence: 0.72,
+    sample_interval_sec: 1.5,
+    max_frames: 24,
+    box_padding_ratio: 0.2,
+    solid_color: "#102030",
+    pixel_block_size: 32,
+    privacy_strength: "strong",
+    include_debug_observations: true,
+  });
+});
+
 test("sends canonical source for every batch input", async () => {
   let captured;
   const media = new MediaRuntime({
@@ -518,6 +768,45 @@ test("uploads a local source with all signed headers, without leaking the API ke
   }
 });
 
+test("uses caption MIME types for local Audiogram SRT and VTT uploads", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "mediaruntime-captions-"));
+  const srt = join(directory, "episode.srt");
+  const vtt = join(directory, "episode.vtt");
+  await writeFile(srt, "1\n00:00:00,000 --> 00:00:01,000\nHello\n");
+  await writeFile(vtt, "WEBVTT\n\n00:00.000 --> 00:01.000\nHello\n");
+  const requested = [];
+  try {
+    const media = new MediaRuntime({
+      apiKey: "sk_test",
+      fetch: async (input, init = {}) => {
+        const url = String(input);
+        if (url.endsWith("/v1/upload-url")) {
+          const body = JSON.parse(init.body);
+          requested.push(body);
+          return json({
+            upload_url: `https://storage.example.test/${body.filename}`,
+            file_uri: `gs://input-bucket/${body.filename}`,
+            upload_headers: { "Content-Type": body.content_type },
+          });
+        }
+        if (url.startsWith("https://storage.example.test/")) {
+          await new Response(init.body).arrayBuffer();
+          return new Response("", { status: 200 });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      },
+    });
+    await media.uploads.uploadFile(srt);
+    await media.uploads.uploadFile(vtt);
+    assert.deepEqual(requested, [
+      { filename: "episode.srt", content_type: "application/x-subrip" },
+      { filename: "episode.vtt", content_type: "text/vtt" },
+    ]);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("wait polls until a terminal state and returns camelCase detail", async () => {
   const queue = [details("PROCESSING"), details("COMPLETED")];
   const media = new MediaRuntime({
@@ -597,7 +886,7 @@ test("wait times out with the last observed job", async () => {
   );
 });
 
-test("covers list, moderation, media-report, and manual webhook retry projections", async () => {
+test("covers list, moderation, reports, and manual webhook retry projections", async () => {
   const media = new MediaRuntime({
     apiKey: "sk_test",
     fetch: async (input, init) => {
@@ -636,6 +925,25 @@ test("covers list, moderation, media-report, and manual webhook retry projection
       if (url.pathname.endsWith("/media-report")) {
         return json({ job_id: "job_1", report: { format: "mov" }, download_url: null, note: null });
       }
+      if (url.pathname.endsWith("/compatibility-report")) {
+        return json({
+          job_id: "job_1",
+          report: { rule_set: { version: "2026-08-20" }, profiles: [] },
+          download_url: null,
+          note: null,
+        });
+      }
+      if (url.pathname.endsWith("/codes")) {
+        return json({
+          job_id: "job_1",
+          report: {
+            payload_is_untrusted: true,
+            detections: [{ decoded_text: "<b>inert</b>", confidence: null }],
+          },
+          download_url: null,
+          note: null,
+        });
+      }
       if (url.pathname.endsWith("/retry-webhook")) {
         return json({ status: "success", msg: "sent", attempts: 1, http_status: 204 });
       }
@@ -650,6 +958,11 @@ test("covers list, moderation, media-report, and manual webhook retry projection
   assert.equal(moderation.checks[0].reviewOnly, false);
   const report = await media.jobs.getMediaReport("job_1");
   assert.deepEqual(report.report, { format: "mov" });
+  const compatibility = await media.jobs.getCompatibilityReport("job_1");
+  assert.equal(compatibility.report.rule_set.version, "2026-08-20");
+  const codes = await media.jobs.getCodeDetections("job_1");
+  assert.equal(codes.report.payload_is_untrusted, true);
+  assert.equal(codes.report.detections[0].decoded_text, "<b>inert</b>");
   const retried = await media.jobs.retryWebhook("job_1");
   assert.equal(retried.httpStatus, 204);
 });
@@ -660,6 +973,8 @@ test("rejects an empty job id before making a request", async () => {
     fetch: async () => { throw new Error("must not run"); },
   });
   await assert.rejects(media.jobs.getModeration("  "), ValidationError);
+  await assert.rejects(media.jobs.getCompatibilityReport("  "), ValidationError);
+  await assert.rejects(media.jobs.getCodeDetections("  "), ValidationError);
 });
 
 test("wraps an elapsed request deadline in a typed timeout error", async () => {
