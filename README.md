@@ -20,6 +20,8 @@ npm install @mediaruntime/node
 
 Node.js 22 or newer is required.
 
+For a complete clone-and-run project, see the [MediaRuntime Node.js quickstart](https://github.com/ericel/mediaruntime-quickstarts/tree/main/node). The shared repository also includes webhook receivers, Postman guidance, and equivalent Python, Go, and PHP examples.
+
 ## Submit, wait, and get the bundle
 
 ```ts
