@@ -43,6 +43,7 @@ export class MediaRuntimeApiError extends MediaRuntimeError {
   readonly headers?: Headers;
 
   constructor(message: string, options: ApiErrorOptions) {
+    // Preserve request metadata so callers can log support IDs without parsing messages.
     super(message);
     this.status = options.status;
     this.code = options.code ?? "api_error";

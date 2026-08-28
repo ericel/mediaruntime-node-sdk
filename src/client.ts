@@ -31,6 +31,7 @@ export class MediaRuntime {
       throw new TypeError("A fetch implementation is required");
     }
 
+    // Explicit options override environment configuration for predictable service startup.
     const transport = new Transport({
       apiKey: options.apiKey ?? process.env.MEDIARUNTIME_API_KEY,
       baseUrl: options.baseUrl ?? process.env.MEDIARUNTIME_API_URL ?? DEFAULT_BASE_URL,
@@ -39,6 +40,7 @@ export class MediaRuntime {
       fetch: fetchImplementation as FetchImplementation,
     });
 
+    // Resource clients share one transport, retry policy, and authentication boundary.
     this.uploads = new UploadsClient(transport);
     this.jobs = new JobsClient(transport, this.uploads);
     this.capabilities = new CapabilitiesClient(transport);

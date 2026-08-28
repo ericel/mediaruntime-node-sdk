@@ -26,10 +26,12 @@ function recipeName(value: string): string {
       field: "name",
     });
   }
+  // Encode even validated names so future grammar changes cannot create extra path segments.
   return encodeURIComponent(name);
 }
 
 function serializeTemplate(template: RecipeTemplate): UnknownRecord {
+  // Keep all camelCase-to-wire translation at this SDK boundary.
   const value: UnknownRecord = {};
   if (template.outputs !== undefined) value.outputs = template.outputs.map(serializeOutput);
   if (template.moderation !== undefined) value.moderation = template.moderation;
@@ -218,6 +220,7 @@ export class RecipesClient {
     const path = options.version === undefined
       ? `/recipes/${recipeName(name)}`
       : `/recipes/${recipeName(name)}/versions/${options.version}`;
+    // expectedLatestVersion is an optimistic-concurrency guard for competing maintainers.
     return parseRecipe(await this.#transport.request<unknown>({
       method: "GET", path, retry: "safe", signal: options.signal,
     }));

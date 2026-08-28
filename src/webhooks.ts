@@ -76,6 +76,7 @@ export class WebhooksClient {
       );
     }
 
+    // Verification requires bytes captured before any JSON middleware rewrites the body.
     const eventId = headerValue(headers, "X-Transcoder-Id").trim();
     const timestampHeader = headerValue(headers, "X-Transcoder-Timestamp").trim();
     const signatureHeader = headerValue(headers, "X-Transcoder-Signature").trim();
@@ -108,6 +109,7 @@ export class WebhooksClient {
       );
     }
 
+    // Timestamp tolerance limits replay; consumers should still durably deduplicate event IDs.
     const toleranceSeconds = options.toleranceSeconds ?? 300;
     const now = options.now ?? Date.now() / 1000;
     if (toleranceSeconds < 0 || Math.abs(now - timestamp) > toleranceSeconds) {
@@ -122,6 +124,7 @@ export class WebhooksClient {
       .update(`${timestampHeader}.${eventId}.`, "utf8")
       .update(body)
       .digest();
+    // Multiple v1 values support signature rotation; every comparison remains constant-time.
     const valid = parts.signatures.some((signature) => {
       if (!/^[0-9a-f]{64}$/i.test(signature)) return false;
       const received = Buffer.from(signature, "hex");
@@ -134,6 +137,7 @@ export class WebhooksClient {
       );
     }
 
+    // Parse only after authentication so untrusted JSON never reaches application handlers.
     let payload: unknown;
     try {
       payload = JSON.parse(body.toString("utf8")) as unknown;
@@ -173,6 +177,7 @@ export class WebhooksClient {
     next?: ExpressNextFunction,
   ) => Promise<void> {
     return async (request, response, next) => {
+      // Express must install a raw-body parser on this route before ordinary express.json().
       if (!Buffer.isBuffer(request.body) && !(request.body instanceof Uint8Array)) {
         response.sendStatus(401);
         return;
@@ -196,6 +201,7 @@ export class WebhooksClient {
     options: VerifyWebhookOptions = {},
   ): (request: FastifyRequestLike, reply: FastifyReplyLike) => Promise<void> {
     return async (request, reply) => {
+      // Prefer Fastify's rawBody plugin output; body is accepted for compatible raw parsers.
       const rawBody = request.rawBody ?? request.body;
       if (
         !Buffer.isBuffer(rawBody) &&

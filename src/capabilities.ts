@@ -10,6 +10,7 @@ export class CapabilitiesClient {
   }
 
   async retrieve(options: { signal?: AbortSignal } = {}): Promise<Capabilities> {
+    // Capability discovery is public so setup tools can inspect presets before authentication.
     const value = await this.#transport.request<unknown>({
       method: "GET",
       path: "/capabilities",

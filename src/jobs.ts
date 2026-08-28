@@ -35,6 +35,7 @@ function jobPathId(jobId: string): string {
   if (!value) {
     throw new ValidationError("jobId must not be empty", { status: 400, field: "jobId" });
   }
+  // Treat every caller-provided ID as one path segment, even if it contains delimiters.
   return encodeURIComponent(value);
 }
 
@@ -167,6 +168,7 @@ export class JobsClient {
     const idempotencyKey = params.idempotencyKey?.trim() ?? randomUUID();
     let resolved: { source?: string; inputs?: ResolvedBatchInput[] };
     if ("source" in params && params.source !== undefined) {
+      // Local files upload transparently; HTTP(S), signed, and gs:// sources pass through.
       resolved = { source: await this.#uploads.resolveSource(params.source, params.signal) };
     } else {
       const inputs: ResolvedBatchInput[] = [];
@@ -230,6 +232,7 @@ export class JobsClient {
       if (TERMINAL_STATUSES.has(String(lastJob.status).toUpperCase())) return lastJob;
       const remaining = deadline - Date.now();
       if (remaining <= 0) throw new JobWaitTimeoutError(timeoutMs, lastJob);
+      // Jitter prevents many workers polling the same account in lockstep.
       const jittered = Math.floor(nextDelay * (0.85 + Math.random() * 0.3));
       await delay(Math.min(remaining, jittered), options.signal);
       nextDelay = Math.min(maxDelayMs, Math.max(1, nextDelay * 1.5));
@@ -259,6 +262,7 @@ export class JobsClient {
       retry: "safe",
       signal: options.signal,
     });
+    // The parsed report is durable; any returned download URL is signed and time-limited.
     return parseMediaReport(value);
   }
 

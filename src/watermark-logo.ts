@@ -90,6 +90,7 @@ export class WatermarkLogoClient {
         field: "path",
       });
     }
+    // Watermark setup is two-phase: upload bytes first, then confirm account configuration.
     const target = await this.createUploadTarget("image/png", options.signal);
     const headers = new Headers(target.uploadHeaders);
     if (!headers.has("Content-Length")) headers.set("Content-Length", String(info.size));

@@ -105,12 +105,15 @@ export class UploadsClient {
     }
     const filename = basename(absolutePath);
     const contentType = options.contentType ?? inferContentType(absolutePath);
+    // The API supplies the signed destination and any storage-provider-specific headers.
     const target = await this.createTarget(filename, contentType, options.signal);
     await this.putFile(target, absolutePath, info.size, options.signal);
+    // Jobs consume fileUri; uploadUrl remains an expiring transport detail.
     return { ...target, filename, contentType };
   }
 
   async resolveSource(source: Source, signal?: AbortSignal): Promise<string> {
+    // Hosted sources pass through; local paths upload and become private canonical URIs.
     if (source instanceof URL) {
       if (source.protocol === "http:" || source.protocol === "https:" || source.protocol === "gs:") {
         return source.toString();
@@ -141,6 +144,7 @@ export class UploadsClient {
     size: number,
     signal?: AbortSignal,
   ): Promise<void> {
+    // Signed uploads contain storage headers only and never carry the MediaRuntime API key.
     const headers = new Headers(target.uploadHeaders);
     if (!headers.has("Content-Length")) headers.set("Content-Length", String(size));
     const nodeStream = createReadStream(absolutePath);

@@ -43,6 +43,7 @@ export interface ResolvedBatchInput extends Omit<BatchInput, "source"> {
 }
 
 function record(value: unknown): UnknownRecord {
+  // Defensive parsing tolerates additive gateway fields without accepting wrong containers.
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as UnknownRecord)
     : {};
@@ -65,6 +66,7 @@ function stringArray(value: unknown): string[] {
 }
 
 function setDefined(target: UnknownRecord, key: string, value: unknown): void {
+  // Preserve meaningful false, zero, and empty values; omit only undefined options.
   if (value !== undefined) target[key] = value;
 }
 
@@ -230,6 +232,7 @@ export function serializeCreateJob(
   params: CreateJobParams,
   resolved: { source?: string; inputs?: ResolvedBatchInput[] },
 ): UnknownRecord {
+  // Use already-resolved sources so local filesystem paths never cross the API boundary.
   const body: UnknownRecord = {};
   if (resolved.source !== undefined) body.source = resolved.source;
   if (resolved.inputs !== undefined) {
@@ -397,6 +400,7 @@ function parseMedia(value: unknown): JobMedia | null {
 }
 
 export function parseJobDetails(value: unknown): JobDetails {
+  // Convert wire snake_case once and expose only the stable typed client model.
   const data = record(value);
   const metadata = record(data.metadata) as Metadata;
   return {

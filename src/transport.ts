@@ -41,6 +41,7 @@ function normalizeApiBase(baseUrl: string): string {
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new TypeError("MediaRuntime baseUrl must use http or https");
   }
+  // Accept a caller-supplied /v1 suffix while keeping internal endpoint construction canonical.
   return trimmed.endsWith("/v1") ? trimmed : `${trimmed}/v1`;
 }
 
@@ -51,6 +52,7 @@ function normalizedError(details: unknown): Record<string, unknown> | undefined 
 }
 
 function errorMessage(details: unknown, status: number): string {
+  // Normalize canonical envelopes and common framework validation shapes for consumers.
   if (typeof details === "string" && details) return details;
   if (details && typeof details === "object") {
     const record = details as Record<string, unknown>;
@@ -189,6 +191,7 @@ function attemptSignal(signal: AbortSignal | undefined, timeoutMs: number): {
   cleanup: () => void;
   timedOut: () => boolean;
 } {
+  // Compose the caller's cancellation with a fresh timeout for each retry attempt.
   const controller = new AbortController();
   let timeoutTriggered = false;
   const timeout = setTimeout(() => {
@@ -255,6 +258,7 @@ export class Transport {
       body = JSON.stringify(request.body);
     }
 
+    // Call sites declare retry safety explicitly; it is never inferred from the HTTP verb.
     const retryable = canRetry(request);
     const attempts = retryable ? this.#maxRetries + 1 : 1;
     let lastConnectionError: unknown;
@@ -284,6 +288,7 @@ export class Transport {
           response.status >= 500 ||
           (response.status === 409 && error instanceof IdempotencyInProgressError);
         if (retryable && shouldRetryResponse && attempt + 1 < attempts) {
+          // Respect server backpressure before falling back to jittered exponential delay.
           const delay = retryAfterMs(response) ?? backoffMs(attempt);
           await sleep(delay, request.signal);
           continue;
