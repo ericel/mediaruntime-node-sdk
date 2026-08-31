@@ -4,7 +4,7 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable `1.2.0`. The SDK is validated against the production API from a Node.js 22
+Status: stable `1.3.0`. The SDK is validated against the production API from a Node.js 22
 Firebase Functions consumer, including job submission, terminal webhook verification,
 artifact reconciliation, and moderation persistence.
 
@@ -112,6 +112,93 @@ const localMedia = new MediaRuntime({
   baseUrl: "http://localhost:8001",
 });
 ```
+
+## Hosted Sticker Runtime
+
+Activate a character pack and enable it in a collection from the MediaRuntime account
+UI first. On a trusted application server, bind that collection once and use the same
+workspace API key as the rest of the SDK:
+
+```ts
+import { MediaRuntime } from "@mediaruntime/node";
+
+// Keep the workspace API key in server-side environment configuration.
+const media = new MediaRuntime({ apiKey: process.env.MEDIARUNTIME_API_KEY });
+const stickers = media.stickers.collection("stc_11111111111111111111111111111111");
+
+const matches = await stickers.search("beach", { limit: 12 });
+const asset = await stickers.resolve(matches.items[0].stickerId, "small_160");
+const usage = await media.stickers.usage();
+
+// The URL is short-lived and points directly to the verified private WebP object.
+return { sticker: matches.items[0], assetUrl: asset.url, usage };
+```
+
+Collection configuration is also available through the trusted API-key client:
+
+```ts
+// Create application-specific configuration without exposing the API key to clients.
+const collection = await media.stickers.createCollection({
+  name: "Customer support chat",
+  description: "Approved reactions for the support application",
+});
+
+// A paid activation can be enabled by its stable pack ID after account-side activation.
+await media.stickers.enableCollectionPack(collection.collectionId, "sage-summer-v1");
+const configured = await media.stickers.listCollectionPacks(collection.collectionId);
+```
+
+Management methods include `listCollections()`, `getCollection()`,
+`updateCollection()`, `archiveCollection()`, `listCollectionPacks()`,
+`addCollectionPack()` (activation-ID form), `enableCollectionPack()` (stable pack-ID
+form), and `disableCollectionPack()`. Archiving is recoverable, and disabling a binding
+retains the gateway's historical-access policy.
+
+The collection-bound client also provides `listPacks()`, `typeahead()`, and `retrieve()`.
+Its API key stays on your server and authorizes runtime reads in the same way as other
+MediaRuntime server APIs. `media.stickers.usage()` reports the workspace's current
+pooled operations, authorized delivery, remaining included allowance, and settled
+overage. Funded overage continues automatically; an unfunded overage returns a
+structured `402` error with code `sticker_runtime_quota_exceeded`.
+
+For direct browser or mobile access, a trusted server can optionally exchange its API
+key for a short-lived credential restricted to one collection:
+
+```ts
+// Mint this optional grant only on a trusted server.
+const grant = await media.stickers.createClientToken({
+  collectionId: "stc_11111111111111111111111111111111",
+  expiresInSeconds: 900,
+  scopes: ["packs:read", "stickers:search", "stickers:read", "assets:resolve"],
+});
+
+// Return only these grant fields through your own authenticated application endpoint.
+return { accessToken: grant.accessToken, collectionId: grant.collectionId, expiresAt: grant.expiresAt };
+```
+
+The browser or mobile application then uses the grant with the bearer-only client:
+
+```ts
+import { StickerRuntime } from "@mediaruntime/node";
+
+// The collection ID must match the immutable claim in the short-lived token.
+const stickers = new StickerRuntime({
+  accessToken: grant.accessToken,
+  collectionId: grant.collectionId,
+});
+
+const matches = await stickers.search("beach", { limit: 12 });
+const asset = await stickers.resolve(matches.items[0].stickerId, "small_160");
+
+// The URL is short-lived and points directly to the verified private WebP object.
+document.querySelector("img").src = asset.url;
+```
+
+Client tokens last 15 minutes by default and can never exceed one hour. They cannot
+create or modify collections, activate packs, inspect workspace usage, access billing,
+or call MediaRuntime transcoding APIs. Disabling a pack stops new searches immediately;
+exact sticker references already stored by an application may continue to resolve under
+the pack's historical-access policy.
 
 ## Batch inputs
 

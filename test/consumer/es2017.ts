@@ -2,6 +2,7 @@ import {
   MediaRuntime,
   MediaRuntimeApiError,
   MediaRuntimeError,
+  StickerRuntime,
   WebhookVerificationError,
 } from "@mediaruntime/node";
 
@@ -62,3 +63,36 @@ void client.jobs.getCodeDetections("job_123").then((result) => {
   void decoded;
 });
 void new WebhookVerificationError("invalid_body", "invalid body", { cause: new Error("cause") });
+
+// Trusted server code can use its existing API key for every runtime read.
+const stickerCollection = client.stickers.collection("stc_11111111111111111111111111111111");
+void stickerCollection.listPacks().then((packs) => packs[0]?.packId);
+void stickerCollection.search("beach").then((result) => result.items[0]?.stickerId);
+void stickerCollection.typeahead("bea").then((result) => result.suggestions[0]?.text);
+void stickerCollection.retrieve("sage-summer-beach-day").then((sticker) => sticker.label);
+void stickerCollection.resolve("sage-summer-beach-day", "small_160").then((asset) => asset.url);
+// Workspace usage is available only on the trusted API-key root client.
+void client.stickers.usage().then((usage) => {
+  console.log(usage.status, usage.remainingOperations, usage.overageChargedCents);
+});
+// Collection lifecycle and pack bindings are API-key-only management operations.
+void client.stickers.listCollections({ includeArchived: true }).then((page) => page.items[0]?.name);
+void client.stickers.createCollection({ name: "Support chat" }).then((collection) => {
+  void client.stickers.enableCollectionPack(collection.collectionId, "sage-summer-v1");
+});
+void client.stickers.updateCollection("stc_11111111111111111111111111111111", {
+  description: "Customer-facing reactions",
+});
+void client.stickers.listCollectionPacks("stc_11111111111111111111111111111111");
+
+void client.stickers.createClientToken({
+  // Direct browser or mobile access remains available through a narrow client grant.
+  collectionId: "stc_11111111111111111111111111111111",
+  scopes: ["stickers:search", "assets:resolve"],
+}).then((grant) => {
+  const stickers = new StickerRuntime({
+    accessToken: grant.accessToken,
+    collectionId: grant.collectionId,
+  });
+  void stickers.search("beach").then((result) => result.items[0]?.stickerId);
+});

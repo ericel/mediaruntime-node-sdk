@@ -16,6 +16,7 @@ type RetryMode = "safe" | "idempotent-submit" | "never";
 
 export interface TransportOptions {
   apiKey?: string;
+  bearerToken?: string;
   baseUrl: string;
   timeoutMs: number;
   maxRetries: number;
@@ -23,7 +24,8 @@ export interface TransportOptions {
 }
 
 export interface TransportRequest {
-  method: "GET" | "POST" | "DELETE";
+  // Include the full mutation set used by collection lifecycle endpoints.
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   query?: Record<string, string | number | undefined>;
   body?: unknown;
@@ -51,13 +53,26 @@ function normalizedError(details: unknown): Record<string, unknown> | undefined 
   return error && typeof error === "object" ? error as Record<string, unknown> : undefined;
 }
 
+
+function structuredDetail(details: unknown): Record<string, unknown> | undefined {
+  // FastAPI may place an application error object directly under `detail` rather
+  // than the gateway's canonical `error` envelope.
+  if (!details || typeof details !== "object") return undefined;
+  const detail = (details as Record<string, unknown>).detail;
+  return detail && typeof detail === "object" && !Array.isArray(detail)
+    ? detail as Record<string, unknown>
+    : undefined;
+}
+
 function errorMessage(details: unknown, status: number): string {
   // Normalize canonical envelopes and common framework validation shapes for consumers.
   if (typeof details === "string" && details) return details;
   if (details && typeof details === "object") {
     const record = details as Record<string, unknown>;
     const error = normalizedError(details);
+    const detail = structuredDetail(details);
     if (typeof error?.message === "string") return error.message;
+    if (typeof detail?.message === "string") return detail.message;
     if (typeof record.detail === "string") return record.detail;
     if (typeof record.message === "string") return record.message;
     if (typeof record.msg === "string") return record.msg;
@@ -105,10 +120,15 @@ function apiError(
 ): MediaRuntimeApiError {
   const message = errorMessage(details, response.status);
   const normalized = normalizedError(details);
-  const code = typeof normalized?.code === "string" ? normalized.code : "api_error";
+  const detail = structuredDetail(details);
+  const code = typeof normalized?.code === "string"
+    ? normalized.code
+    : typeof detail?.code === "string"
+    ? detail.code
+    : "api_error";
   const normalizedDetails = normalized && "details" in normalized
     ? normalized.details
-    : details;
+    : detail ?? details;
   const requestId = (
     typeof normalized?.request_id === "string" ? normalized.request_id : undefined
   ) ?? response.headers.get("X-Request-Id") ?? undefined;
@@ -217,6 +237,7 @@ function canRetry(request: TransportRequest): boolean {
 
 export class Transport {
   readonly #apiKey?: string;
+  readonly #bearerToken?: string;
   readonly #apiBase: string;
   readonly #timeoutMs: number;
   readonly #maxRetries: number;
@@ -224,6 +245,12 @@ export class Transport {
 
   constructor(options: TransportOptions) {
     this.#apiKey = options.apiKey?.trim() || undefined;
+    this.#bearerToken = options.bearerToken?.trim() || undefined;
+    if (this.#apiKey && this.#bearerToken) {
+      // Sending both credentials creates ambiguous server authorization and risks
+      // accidentally exposing the master key from a client-token integration.
+      throw new TypeError("Use either a MediaRuntime API key or bearer token, not both");
+    }
     this.#apiBase = normalizeApiBase(options.baseUrl);
     this.#timeoutMs = options.timeoutMs;
     this.#maxRetries = options.maxRetries;
@@ -236,8 +263,8 @@ export class Transport {
 
   async request<T>(request: TransportRequest): Promise<T> {
     const authenticated = request.authenticated !== false;
-    if (authenticated && !this.#apiKey) {
-      throw new AuthenticationError("A MediaRuntime API key is required for this operation", {
+    if (authenticated && !this.#apiKey && !this.#bearerToken) {
+      throw new AuthenticationError("A MediaRuntime API key or bearer token is required for this operation", {
         status: 401,
         code: "authentication_error",
       });
@@ -252,6 +279,11 @@ export class Transport {
     headers.set("Accept", "application/json");
     headers.set("User-Agent", "mediaruntime-node/0.1.0");
     if (authenticated && this.#apiKey) headers.set("X-API-Key", this.#apiKey);
+    if (authenticated && this.#bearerToken) {
+      // Scoped Sticker Runtime clients use the standard bearer header and never
+      // receive or synthesize an X-API-Key value.
+      headers.set("Authorization", `Bearer ${this.#bearerToken}`);
+    }
     let body: string | undefined;
     if (request.body !== undefined) {
       headers.set("Content-Type", "application/json");

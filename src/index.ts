@@ -3,6 +3,8 @@ export { Job, JobsClient } from "./jobs.js";
 export { UploadsClient } from "./uploads.js";
 export { CapabilitiesClient } from "./capabilities.js";
 export { RecipesClient } from "./recipes.js";
+// Export both authentication entry points while keeping their collection operations identical.
+export { HostedStickersClient, StickerCollectionClient, StickerRuntime } from "./stickers.js";
 export { WatermarkLogoClient } from "./watermark-logo.js";
 export { WebhooksClient, webhookHeadersFromNode } from "./webhooks.js";
 

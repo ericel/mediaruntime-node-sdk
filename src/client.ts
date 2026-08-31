@@ -1,6 +1,7 @@
 import { CapabilitiesClient } from "./capabilities.js";
 import { JobsClient } from "./jobs.js";
 import { RecipesClient } from "./recipes.js";
+import { HostedStickersClient } from "./stickers.js";
 import { Transport } from "./transport.js";
 import type { FetchImplementation, MediaRuntimeOptions } from "./types.js";
 import { UploadsClient } from "./uploads.js";
@@ -14,6 +15,7 @@ export class MediaRuntime {
   readonly uploads: UploadsClient;
   readonly capabilities: CapabilitiesClient;
   readonly recipes: RecipesClient;
+  readonly stickers: HostedStickersClient;
   readonly watermarkLogo: WatermarkLogoClient;
   readonly webhooks: WebhooksClient;
 
@@ -45,6 +47,9 @@ export class MediaRuntime {
     this.jobs = new JobsClient(transport, this.uploads);
     this.capabilities = new CapabilitiesClient(transport);
     this.recipes = new RecipesClient(transport);
+    // Server-side collection reads and token issuance stay on the trusted API-key
+    // transport; untrusted clients can construct a separate StickerRuntime grant.
+    this.stickers = new HostedStickersClient(transport);
     this.watermarkLogo = new WatermarkLogoClient(transport);
     this.webhooks = new WebhooksClient(
       options.webhookSecret ?? process.env.MEDIARUNTIME_WEBHOOK_SECRET,

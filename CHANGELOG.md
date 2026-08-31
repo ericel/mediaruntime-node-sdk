@@ -1,7 +1,21 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 — 2026-08-31
 
+- Add API-key collection management for list, create, retrieve, update, recoverable
+  archive, retained binding history, and activation-ID or stable-pack-ID binding flows.
+- Add `media.stickers.usage()` for typed workspace-pooled operation, authorized
+  delivery, remaining allowance, status, and settled-overage reporting.
+- Preserve structured `sticker_runtime_quota_exceeded` details from FastAPI `402`
+  responses so services can direct workspace owners to fund their wallet.
+- Add `media.stickers.collection(collectionId)` as the primary server-side Sticker
+  Runtime client, using the configured workspace API key for pack reads, search,
+  typeahead, metadata retrieval, and asset resolution.
+- Add `media.stickers.createClientToken()` for server-side issuance of short-lived,
+  collection-scoped Hosted Sticker Runtime credentials.
+- Add the bearer-only `StickerRuntime` client for pack discovery, search, typeahead,
+  stable metadata retrieval, and historical-safe asset resolution without exposing a
+  workspace API key.
 - Add typed `privacyRedaction` controls for the Premium still-image Preview; video and
   animated-image redaction remain unavailable and are rejected by the gateway and engine.
 - Document the stable public privacy-report boundary: detector categories and outcomes,

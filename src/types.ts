@@ -651,3 +651,202 @@ export interface MediaRuntimeOptions {
   maxRetries?: number;
   fetch?: FetchImplementation;
 }
+
+export type StickerRuntimeScope =
+  | "packs:read"
+  | "stickers:search"
+  | "stickers:read"
+  | "assets:resolve";
+
+export type StickerVariantName =
+  | "animated"
+  | "reduced_motion"
+  | "small_80"
+  | "small_100"
+  | "small_160"
+  | "thumbnail";
+
+export interface CreateStickerClientTokenParams {
+  /** Server-selected collection that the untrusted client may access. */
+  collectionId: string;
+  /** Lifetime from 60 to 3600 seconds. Defaults to 900 seconds. */
+  expiresInSeconds?: number;
+  /** Omit to grant all four read-only Sticker Runtime operations. */
+  scopes?: StickerRuntimeScope[];
+  signal?: AbortSignal;
+}
+
+export interface StickerClientToken {
+  accessToken: string;
+  tokenType: "Bearer";
+  expiresIn: number;
+  expiresAt: string;
+  collectionId: string;
+  scopes: StickerRuntimeScope[];
+}
+
+export type StickerCollectionStatus = "active" | "archived";
+export type StickerCollectionPackStatus = "enabled" | "disabled";
+
+export interface CreateStickerCollectionParams {
+  /** Human-readable application or integration name. */
+  name: string;
+  /** Optional private note describing where the collection is used. */
+  description?: string | null;
+  signal?: AbortSignal;
+}
+
+export interface UpdateStickerCollectionParams {
+  /** Omit fields that should retain their current values. */
+  name?: string;
+  description?: string | null;
+  /** Archive reversibly or restore the collection for runtime reads. */
+  status?: StickerCollectionStatus;
+  signal?: AbortSignal;
+}
+
+export interface StickerCollectionPackBinding {
+  bindingId: string;
+  collectionId: string;
+  activationId: string;
+  packId: string;
+  packSlug: string;
+  packName: string;
+  packVersion: string;
+  status: StickerCollectionPackStatus;
+  historicalAccess: "preserve" | "revoke";
+  firstEnabledAt: string | null;
+  enabledAt: string | null;
+  disabledAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface StickerCollection {
+  collectionId: string;
+  workspaceId: string;
+  name: string;
+  description: string;
+  status: StickerCollectionStatus;
+  /** Only enabled bindings are embedded; use listCollectionPacks for audit history. */
+  packs: StickerCollectionPackBinding[];
+  createdAt: string;
+  archivedAt: string | null;
+  updatedAt: string;
+}
+
+export interface StickerCollectionList {
+  items: StickerCollection[];
+  total: number;
+}
+
+export interface StickerCollectionPackBindingList {
+  items: StickerCollectionPackBinding[];
+  total: number;
+}
+
+export interface AddStickerCollectionPackParams {
+  /** Existing paid Hosted Sticker Runtime activation to bind. */
+  activationId: string;
+  signal?: AbortSignal;
+}
+
+export interface StickerRuntimeUsage {
+  /** UTC calendar month used by the pooled allowance. */
+  month: string;
+  operations: number;
+  includedOperations: number;
+  remainingOperations: number;
+  operationsUtilizationPercent: number;
+  authorizedDeliveryBytes: number;
+  includedDeliveryBytes: number;
+  remainingDeliveryBytes: number;
+  deliveryUtilizationPercent: number;
+  overageChargedCents: number;
+  currency: "USD";
+  status: "healthy" | "approaching_limit" | "overage";
+}
+
+export interface StickerRuntimeOptions {
+  /** Short-lived `mrt_v1_` token minted by a trusted MediaRuntime server client. */
+  accessToken: string;
+  /** Must match the collection embedded in the access token. */
+  collectionId: string;
+  baseUrl?: string;
+  timeoutMs?: number;
+  maxRetries?: number;
+  fetch?: FetchImplementation;
+}
+
+export interface RuntimeStickerPack {
+  packId: string;
+  slug: string;
+  name: string;
+  version: string;
+  assetCount: number;
+  animated: boolean;
+  categories: string[];
+  characters: Array<{ id: string; name: string }>;
+  activationId: string;
+}
+
+export interface RuntimeStickerVariant {
+  name: StickerVariantName;
+  state: string;
+  mediaType: "image/webp";
+  bytes: number;
+}
+
+export interface RuntimeSticker {
+  stickerId: string;
+  semanticId: string;
+  packId: string;
+  packSlug: string;
+  packVersion: string;
+  label: string;
+  emoji: string | null;
+  category: string | null;
+  keywords: string[];
+  animated: boolean;
+  variants: RuntimeStickerVariant[];
+  score?: number;
+}
+
+export interface StickerSearchOptions {
+  packId?: string;
+  category?: string;
+  animated?: boolean;
+  limit?: number;
+  signal?: AbortSignal;
+}
+
+export interface StickerSearchResult {
+  query: string;
+  items: RuntimeSticker[];
+  total: number;
+}
+
+export interface StickerTypeaheadOptions {
+  packId?: string;
+  locale?: string;
+  limit?: number;
+  signal?: AbortSignal;
+}
+
+export interface StickerTypeaheadResult {
+  query: string;
+  locale: string;
+  suggestions: Array<{ text: string; assetCount: number }>;
+}
+
+export interface StickerAssetResolution {
+  stickerId: string;
+  packId: string;
+  packVersion: string;
+  variant: StickerVariantName;
+  mediaType: "image/webp";
+  bytes: number;
+  sha256: string;
+  url: string;
+  expiresInSeconds: number;
+  expiresAt: string;
+}
