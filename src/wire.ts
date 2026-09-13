@@ -1,8 +1,14 @@
+import { ValidationError } from "./errors.js";
 import type {
   BatchInput,
   AnimationOptions,
   AudiogramOptions,
   ContactSheetOptions,
+  ClipOptions,
+  ClipAnalysisOptions,
+  ClipTranscriptSegment,
+  ClipCandidatesResult,
+  ClipEmptyReason,
   PlaceholderOptions,
   PrivacyRedactionOptions,
   Capabilities,
@@ -37,6 +43,82 @@ import type {
 } from "./types.js";
 
 type UnknownRecord = Record<string, unknown>;
+
+/** Validate reusable plans before their timestamps can become a new paid job. */
+export function parseClipCandidates(value: unknown): ClipCandidatesResult {
+  const invalid = (field: string): never => {
+    // Describe the broken field without echoing transcript content or internal data.
+    throw new ValidationError(`Invalid clip candidate response: ${field}`, {
+      status: 502, code: "invalid_clip_plan", field: `clip_candidates.${field}`,
+    });
+  };
+  const boundedNumber = (value: unknown, field: string, minimum: number, maximum: number): number => {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < minimum || value > maximum) {
+      return invalid(field);
+    }
+    return value;
+  };
+  const data = record(value);
+  if (data.schema_version !== 1 || (data.version !== undefined && data.version !== 1)) invalid("schema_version");
+  if (data.preset !== undefined && data.preset !== "clip_candidates_v1") invalid("preset");
+  const sourceDuration = boundedNumber(data.source_duration_sec, "source_duration_sec", Number.MIN_VALUE, 604800);
+  if (data.method !== "transcript_heuristics_v1") invalid("method");
+  if (data.transcript_source !== "supplied" && data.transcript_source !== "whisper") invalid("transcript_source");
+  if (!Array.isArray(data.transcript) || data.transcript.length > 2000) invalid("transcript");
+  if (!Array.isArray(data.candidates) || data.candidates.length > 20) invalid("candidates");
+
+  let previousStart = -1;
+  let totalTextBytes = 0;
+  const transcript = (data.transcript as unknown[]).map((value, index) => {
+    const segment = record(value);
+    const field = `transcript[${index}]`;
+    const start = boundedNumber(segment.start_time_sec, `${field}.start_time_sec`, 0, 604800);
+    // Whisper timestamps have 10ms granularity. Match the engine's 100ms end
+    // tolerance rather than reject a valid final cue rounded past media duration.
+    const end = boundedNumber(segment.end_time_sec, `${field}.end_time_sec`, 0, Math.min(604800, sourceDuration + 0.1));
+    if (end <= start || start < previousStart) invalid(field);
+    if (typeof segment.text !== "string" || !segment.text.trim()) invalid(`${field}.text`);
+    const text = segment.text as string;
+    const bytes = Buffer.byteLength(text, "utf8");
+    totalTextBytes += bytes;
+    if (bytes > 2000 || totalTextBytes > 256 * 1024) invalid(`${field}.text`);
+    previousStart = start;
+    return { startTimeSec: start, endTimeSec: end, text };
+  });
+  const candidates = (data.candidates as unknown[]).map((value, index) => {
+    const candidate = record(value);
+    const field = `candidates[${index}]`;
+    const start = boundedNumber(candidate.start_time_sec, `${field}.start_time_sec`, 0, 604800);
+    const duration = boundedNumber(candidate.duration_sec, `${field}.duration_sec`, Number.MIN_VALUE, 300);
+    if (start + duration > sourceDuration + 0.1) invalid(field);
+    if (typeof candidate.text !== "string" || candidate.text.length > 256 * 1024) invalid(`${field}.text`);
+    const score = boundedNumber(candidate.score, `${field}.score`, 0, Number.MAX_VALUE);
+    if (!Array.isArray(candidate.reasons) || candidate.reasons.length > 20 ||
+        candidate.reasons.some((reason) => typeof reason !== "string")) invalid(`${field}.reasons`);
+    if (candidate.id != null && (typeof candidate.id !== "string" || candidate.id.length > 128)) invalid(`${field}.id`);
+    return {
+      id: candidate.id == null ? "" : candidate.id as string,
+      startTimeSec: start, durationSec: duration, text: candidate.text as string,
+      score, reasons: [...candidate.reasons as string[]],
+    };
+  });
+  // Older stored reports omit the reason. Preserve that compatibility, but never
+  // present a malformed reason as a valid analysis outcome.
+  const emptyReason = data.empty_reason ?? null;
+  const emptyReasons: readonly string[] = [
+    "no_speech", "no_keyword_match", "no_matching_ranges", "source_too_short",
+  ];
+  if (emptyReason !== null &&
+      (typeof emptyReason !== "string" || !emptyReasons.includes(emptyReason))) {
+    invalid("empty_reason");
+  }
+  // Unknown additive fields are deliberately omitted, keeping the plan portable.
+  return {
+    schemaVersion: 1, sourceDurationSec: sourceDuration,
+    method: data.method as string, transcriptSource: data.transcript_source as string,
+    transcript, candidates, emptyReason: emptyReason as ClipEmptyReason | null,
+  };
+}
 
 export interface ResolvedBatchInput extends Omit<BatchInput, "source"> {
   source: string;
@@ -171,6 +253,35 @@ function serializeContactSheet(value: ContactSheetOptions): UnknownRecord {
   return output;
 }
 
+function serializeClipTranscript(segments: ClipTranscriptSegment[]): UnknownRecord[] {
+  return segments.map((segment) => ({
+    start_time_sec: segment.startTimeSec,
+    end_time_sec: segment.endTimeSec,
+    text: segment.text,
+  }));
+}
+
+function serializeClip(value: ClipOptions): UnknownRecord {
+  const output: UnknownRecord = {
+    start_time_sec: value.startTimeSec,
+    duration_sec: value.durationSec,
+  };
+  setDefined(output, "layout", value.layout);
+  setDefined(output, "burn_captions", value.burnCaptions);
+  if (value.transcript) output.transcript = serializeClipTranscript(value.transcript);
+  return output;
+}
+
+function serializeClipAnalysis(value: ClipAnalysisOptions): UnknownRecord {
+  const output: UnknownRecord = {};
+  setDefined(output, "min_duration_sec", value.minDurationSec);
+  setDefined(output, "max_duration_sec", value.maxDurationSec);
+  setDefined(output, "max_candidates", value.maxCandidates);
+  setDefined(output, "keywords", value.keywords);
+  if (value.transcript) output.transcript = serializeClipTranscript(value.transcript);
+  return output;
+}
+
 function serializeAudiogram(value: AudiogramOptions): UnknownRecord {
   const output: UnknownRecord = { artwork_source: value.artworkSource };
   setDefined(output, "captions_source", value.captionsSource);
@@ -220,6 +331,8 @@ export function serializeOutput(value: JobOutput | OutputAlias): UnknownRecord |
   if (value.animation) output.animation = serializeAnimation(value.animation);
   if (value.placeholders) output.placeholders = serializePlaceholders(value.placeholders);
   if (value.contactSheet) output.contact_sheet = serializeContactSheet(value.contactSheet);
+  if (value.clip) output.clip = serializeClip(value.clip);
+  if (value.clipAnalysis) output.clip_analysis = serializeClipAnalysis(value.clipAnalysis);
   if (value.audiogram) output.audiogram = serializeAudiogram(value.audiogram);
   if (value.privacyRedaction) output.privacy_redaction = serializePrivacyRedaction(value.privacyRedaction);
   if (value.images) output.images = value.images.map(serializeImage);

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { JobWaitTimeoutError, ValidationError } from "./errors.js";
 import type {
   CreateJobParams,
+  ClipCandidatesResult,
   CompatibilityReportResult,
   CodeDetectionResult,
   JobDetails,
@@ -17,6 +18,7 @@ import type { Transport } from "./transport.js";
 import type { UploadsClient } from "./uploads.js";
 import {
   parseJobDetails,
+  parseClipCandidates,
   parseJobPage,
   parseJobReceipt,
   parseCompatibilityReport,
@@ -277,6 +279,19 @@ export class JobsClient {
       signal: options.signal,
     });
     return parseCompatibilityReport(value);
+  }
+
+  async getClipCandidates(
+    jobId: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<ClipCandidatesResult> {
+    const value = await this.#transport.request<unknown>({
+      method: "GET",
+      path: `/jobs/${jobPathId(jobId)}/clip-candidates`,
+      retry: "safe",
+      signal: options.signal,
+    });
+    return parseClipCandidates(value);
   }
 
   async getCodeDetections(

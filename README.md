@@ -4,9 +4,12 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
-Status: stable `1.3.0`. The SDK is validated against the production API from a Node.js 22
-Firebase Functions consumer, including job submission, terminal webhook verification,
-artifact reconciliation, and moderation persistence.
+Version `1.4.0` adds [assisted clipping](docs/clipping.md): analyze once, review
+candidate ranges, then render with reusable source-timed captions.
+
+Clipping requires a matching gateway/engine deployment supporting
+`clip_candidates_v1` and `video_clip_v1`. Client package publication does not deploy
+server features; verify their availability through the API capability catalog.
 
 The documented `1.x` public API follows semantic versioning. Breaking changes to public
 exports, request options, error types, or documented response projections require a new
@@ -583,3 +586,8 @@ development fixtures are not included in the published npm package.
 
 Maintainer synchronization instructions live in
 [Contract maintenance](./docs/CONTRACT_MAINTENANCE.md).
+
+## Maintainer releases
+
+See [Manual SDK and CLI releases](docs/RELEASING.md) for versioning, validation,
+Git identity, tag-triggered publication, registry verification, and release recovery.

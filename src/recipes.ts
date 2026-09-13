@@ -141,6 +141,36 @@ function parseOutput(value: unknown): JobOutput | OutputAlias {
       ...(contactSheet.quality !== undefined ? { quality: Number(contactSheet.quality) } : {}),
     };
   }
+  // Recipe templates use the public wire spelling. Preserve source timestamps
+  // while rebuilding SDK options so an edit/save cycle cannot discard a clip.
+  const clipTranscript = (value: unknown) => Array.isArray(value) ? value.map((item) => {
+    const segment = record(item);
+    return {
+      startTimeSec: Number(segment.start_time_sec),
+      endTimeSec: Number(segment.end_time_sec),
+      text: String(segment.text ?? ""),
+    };
+  }) : [];
+  if (data.clip !== undefined) {
+    const clip = record(data.clip);
+    output.clip = {
+      startTimeSec: Number(clip.start_time_sec),
+      durationSec: Number(clip.duration_sec),
+      ...(clip.layout !== undefined ? { layout: String(clip.layout) as "original" | "vertical_blur" } : {}),
+      ...(clip.burn_captions !== undefined ? { burnCaptions: Boolean(clip.burn_captions) } : {}),
+      ...(clip.transcript !== undefined ? { transcript: clipTranscript(clip.transcript) } : {}),
+    };
+  }
+  if (data.clip_analysis !== undefined) {
+    const analysis = record(data.clip_analysis);
+    output.clipAnalysis = {
+      ...(analysis.min_duration_sec !== undefined ? { minDurationSec: Number(analysis.min_duration_sec) } : {}),
+      ...(analysis.max_duration_sec !== undefined ? { maxDurationSec: Number(analysis.max_duration_sec) } : {}),
+      ...(analysis.max_candidates !== undefined ? { maxCandidates: Number(analysis.max_candidates) } : {}),
+      ...(Array.isArray(analysis.keywords) ? { keywords: analysis.keywords.map(String) } : {}),
+      ...(analysis.transcript !== undefined ? { transcript: clipTranscript(analysis.transcript) } : {}),
+    };
+  }
   if (data.privacy_redaction !== undefined) {
     const privacy = record(data.privacy_redaction);
     output.privacyRedaction = {

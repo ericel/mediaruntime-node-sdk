@@ -96,3 +96,15 @@ void client.stickers.createClientToken({
   });
   void stickers.search("beach").then((result) => result.items[0]?.stickerId);
 });
+
+// Keep the released clipping projection usable from older consumer TS targets.
+void client.jobs.getClipCandidates("job_plan").then((plan) => {
+  const reason: import("@mediaruntime/node").ClipEmptyReason | null | undefined = plan.emptyReason;
+  void reason;
+  return client.jobs.create({
+    source: "https://example.com/video.mp4",
+    outputs: [{ type: "mp4", preset: "video_clip_v1", clip: {
+      startTimeSec: 0, durationSec: 5, transcript: plan.transcript, burnCaptions: true,
+    } }],
+  });
+});

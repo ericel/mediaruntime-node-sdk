@@ -104,6 +104,58 @@ export interface ContactSheetOptions {
   quality?: number;
 }
 
+/** Segment times always refer to the original source, including on rerenders. */
+export interface ClipTranscriptSegment {
+  startTimeSec: number;
+  endTimeSec: number;
+  text: string;
+}
+
+export interface ClipOptions {
+  startTimeSec: number;
+  durationSec: number;
+  layout?: "original" | "vertical_blur";
+  burnCaptions?: boolean;
+  transcript?: ClipTranscriptSegment[];
+}
+
+export interface ClipAnalysisOptions {
+  minDurationSec?: number;
+  maxDurationSec?: number;
+  maxCandidates?: number;
+  keywords?: string[];
+  /** Reuse a transcript to skip Whisper; an absent/empty array requests transcription. */
+  transcript?: ClipTranscriptSegment[];
+}
+
+export interface ClipCandidate {
+  id: string;
+  startTimeSec: number;
+  durationSec: number;
+  text: string;
+  /** Heuristic ranking within this analysis, not a probability of engagement. */
+  score: number;
+  reasons: string[];
+}
+
+/** Why a successful analysis produced no suggestions. */
+export type ClipEmptyReason =
+  | "no_speech"
+  | "no_keyword_match"
+  | "no_matching_ranges"
+  | "source_too_short";
+
+export interface ClipCandidatesResult {
+  schemaVersion: number;
+  sourceDurationSec: number;
+  method: string;
+  transcriptSource: string;
+  transcript: ClipTranscriptSegment[];
+  candidates: ClipCandidate[];
+  /** Null for nonempty/older reports; absence is accepted for existing callers. */
+  emptyReason?: ClipEmptyReason | null;
+}
+
 export interface AudiogramOptions {
   artworkSource: string;
   captionsSource?: string;
@@ -163,6 +215,8 @@ export interface JobOutput {
   animation?: AnimationOptions;
   placeholders?: PlaceholderOptions;
   contactSheet?: ContactSheetOptions;
+  clip?: ClipOptions;
+  clipAnalysis?: ClipAnalysisOptions;
   audiogram?: AudiogramOptions;
   privacyRedaction?: PrivacyRedactionOptions;
   images?: ImageRendition[];

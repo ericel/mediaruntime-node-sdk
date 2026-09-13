@@ -365,3 +365,14 @@ fully supported.
 
 CI/CD implementation details and the one-time npm trusted-publisher setup are documented
 in `docs/RELEASING.md`.
+
+
+## Assisted clipping (1.4.0)
+
+`jobs.create()` maps `clipAnalysis`/`clip` and their source-timed transcript segments
+into the public gateway snake_case request contract. `jobs.getClipCandidates()`
+validates the versioned report before returning a portable allowlisted plan, including
+optional typed `emptyReason`; omitted or null reasons in older reports become null.
+Candidate analysis uses existing Whisper only without a supplied transcript. Manual
+rendering never requires Whisper. See [the clipping guide](clipping.md) for empty
+outcomes, caption reuse, duration limits, and the analyze/review/render sequence.

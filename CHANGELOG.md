@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-09-13
+
+- Add typed assisted clipping options and candidate-report retrieval for analyze,
+  review, and render workflows using the existing engine presets.
+- Preserve optional empty-analysis reasons while validating reusable plans and
+  accepting older reports that omit the reason.
+- Document caption-free manual clips, optional supplied transcripts, source-time
+  caption reuse, empty results, and current release/deployment prerequisites.
+- Refresh the public OpenAPI/conformance snapshots for the clipping contract.
+
 ## 1.3.0 — 2026-08-31
 
 - Add API-key collection management for list, create, retrieve, update, recoverable
