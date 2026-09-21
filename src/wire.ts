@@ -359,6 +359,7 @@ export function serializeCreateJob(
   if (params.outputs !== undefined) body.outputs = params.outputs.map(serializeOutput);
   setDefined(body, "recipe", params.recipe);
   setDefined(body, "webhook_url", params.webhookUrl);
+  setDefined(body, "deliver_webhook", params.deliverWebhook);
   if (params.metadata !== undefined) body.metadata = params.metadata;
   if (params.moderation !== undefined) {
     const moderation: UnknownRecord = {};
@@ -517,6 +518,7 @@ export function parseJobDetails(value: unknown): JobDetails {
   const data = record(value);
   const metadata = record(data.metadata) as Metadata;
   return {
+    ...(typeof data.deliver_webhook === "boolean" ? { deliverWebhook: data.deliver_webhook } : {}),
     id: String(data.job_id ?? ""),
     status: status(data.status),
     tier: parseTier(data.tier),

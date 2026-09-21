@@ -273,6 +273,8 @@ interface CreateJobCommon {
   /** Frozen gateway aliases and explicit output recipes may be mixed in one job. */
   outputs?: Array<JobOutput | OutputAlias>;
   webhookUrl?: string;
+  /** Defaults to true. False keeps real processing/billing and disables this job's webhook. */
+  deliverWebhook?: boolean;
   metadata?: Metadata;
   moderation?: ModerationOptions;
   watermark?: WatermarkOptions;
@@ -384,6 +386,8 @@ export interface JobMedia {
 }
 
 export interface JobDetails {
+  /** Undefined when talking to an older gateway that does not expose this policy. */
+  deliverWebhook?: boolean;
   id: string;
   status: JobStatus;
   tier: JobTier;

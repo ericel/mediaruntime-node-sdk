@@ -61,6 +61,9 @@ function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
 }
 
 function validateCreate(params: CreateJobParams): void {
+  if (params.deliverWebhook !== undefined && typeof params.deliverWebhook !== "boolean") {
+    throw new ValidationError("deliverWebhook must be a boolean", { status: 400, field: "deliverWebhook" });
+  }
   const hasSource = "source" in params && params.source !== undefined;
   const hasInputs = "inputs" in params && params.inputs !== undefined;
   if (hasSource === hasInputs) {

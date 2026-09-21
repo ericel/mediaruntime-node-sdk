@@ -1,5 +1,21 @@
 {
   "components": {
+    "headers": {
+      "RequestId": {
+        "description": "Gateway correlation ID. Include this value when contacting support.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "RetryAfter": {
+        "description": "Seconds to wait before retrying a throttled request. Keep the same Idempotency-Key and request body when retrying a job submission.",
+        "example": "60",
+        "schema": {
+          "pattern": "^[0-9]+$",
+          "type": "string"
+        }
+      }
+    },
     "schemas": {
       "AnimationConfig": {
         "properties": {
@@ -713,6 +729,12 @@
           }
         ],
         "properties": {
+          "deliver_webhook": {
+            "default": true,
+            "description": "Deliver the account's terminal webhook for this job. Set false for SDK polling without callbacks. Processing, billing, and output retention are unchanged. Applies to batch completion and cannot be overridden by retry-webhook.",
+            "title": "Deliver Webhook",
+            "type": "boolean"
+          },
           "file_url": {
             "anyOf": [
               {
@@ -2044,6 +2066,12 @@
             ],
             "title": "Created At"
           },
+          "deliver_webhook": {
+            "default": true,
+            "description": "Whether this job permits account webhook delivery. Legacy jobs default to true.",
+            "title": "Deliver Webhook",
+            "type": "boolean"
+          },
           "error": {
             "anyOf": [
               {
@@ -3154,6 +3182,56 @@
         ],
         "title": "PrivacyRedactionStyle",
         "type": "string"
+      },
+      "RateLimitErrorResponse": {
+        "description": "Existing gateway error envelope for HTTP 429; codes distinguish account throttling and sandbox capacity.",
+        "properties": {
+          "detail": {
+            "description": "Legacy error detail; clients should prefer error.code and error.message."
+          },
+          "error": {
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "details": {
+                "description": "Structured error context, or null."
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "retryable": {
+                "const": true,
+                "type": "boolean"
+              },
+              "status": {
+                "const": 429,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "status",
+              "retryable",
+              "request_id",
+              "details"
+            ],
+            "type": "object"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id",
+          "detail"
+        ],
+        "type": "object"
       },
       "RecipeCreateRequest": {
         "properties": {
@@ -5047,7 +5125,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5057,7 +5140,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5094,7 +5182,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5104,7 +5197,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5131,7 +5229,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [],
@@ -5194,7 +5297,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5204,7 +5312,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5296,7 +5409,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5306,7 +5424,42 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Rate limit exceeded",
+                  "error": {
+                    "code": "rate_limited",
+                    "details": null,
+                    "message": "Rate limit exceeded",
+                    "request_id": "req_example_0001",
+                    "retryable": true,
+                    "status": 429
+                  },
+                  "request_id": "req_example_0001"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitErrorResponse"
+                }
+              }
+            },
+            "description": "Request throttled or sandbox capacity reached. Honor Retry-After before retrying.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5349,7 +5502,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5359,7 +5517,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5399,19 +5562,44 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "401": {
-            "description": "Authentication is missing or invalid."
+            "description": "Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "404": {
-            "description": "The job or its retained artifacts were not found."
+            "description": "The job or its retained artifacts were not found.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "409": {
-            "description": "The job has not completed."
+            "description": "The job has not completed.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "410": {
-            "description": "The job's artifact retention period has elapsed."
+            "description": "The job's artifact retention period has elapsed.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5421,10 +5609,20 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "503": {
-            "description": "Artifact storage is temporarily unavailable."
+            "description": "Artifact storage is temporarily unavailable.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5502,7 +5700,12 @@
                 }
               }
             },
-            "description": "With redirect=false, a short-lived generation-pinned URL. Do not persist it or forward API credentials to storage."
+            "description": "With redirect=false, a short-lived generation-pinned URL. Do not persist it or forward API credentials to storage.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "307": {
             "description": "Redirect to a short-lived signed URL for this artifact.",
@@ -5513,20 +5716,43 @@
                   "format": "uri",
                   "type": "string"
                 }
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
               }
             }
           },
           "401": {
-            "description": "Authentication is missing or invalid."
+            "description": "Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "404": {
-            "description": "The job or artifact was not found."
+            "description": "The job or artifact was not found.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "409": {
-            "description": "The job has not completed."
+            "description": "The job has not completed.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "410": {
-            "description": "The job's artifact retention period has elapsed."
+            "description": "The job's artifact retention period has elapsed.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5536,10 +5762,20 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "503": {
-            "description": "Artifact storage is temporarily unavailable."
+            "description": "Artifact storage is temporarily unavailable.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5595,20 +5831,43 @@
                   "format": "uri",
                   "type": "string"
                 }
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
               }
             }
           },
           "401": {
-            "description": "The delivery token is missing or invalid."
+            "description": "The delivery token is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "403": {
-            "description": "The delivery token does not authorize this job."
+            "description": "The delivery token does not authorize this job.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "404": {
-            "description": "The job or its bundle was not found."
+            "description": "The job or its bundle was not found.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "410": {
-            "description": "The delivery token has expired."
+            "description": "The delivery token has expired.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5618,7 +5877,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [],
@@ -5654,16 +5918,36 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "404": {
-            "description": "The job or retained clip plan was not found."
+            "description": "The job or retained clip plan was not found.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "409": {
-            "description": "The job has not completed."
+            "description": "The job has not completed.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "410": {
-            "description": "The job's artifact retention period has elapsed."
+            "description": "The job's artifact retention period has elapsed.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5673,7 +5957,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5713,7 +6002,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5723,7 +6017,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5763,7 +6062,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5773,7 +6077,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5813,7 +6122,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5823,7 +6137,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5863,7 +6182,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5873,7 +6197,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -5913,7 +6242,20 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "409": {
+            "description": "Webhook delivery was disabled for this job (webhook_delivery_disabled). Poll its results instead.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -5923,7 +6265,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6019,7 +6366,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6029,7 +6381,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [],
@@ -6064,7 +6421,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6074,7 +6436,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [],
@@ -6097,7 +6464,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6132,7 +6504,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6142,7 +6519,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6181,7 +6563,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6191,7 +6578,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6228,7 +6620,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6238,7 +6635,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6287,7 +6689,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6297,7 +6704,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6346,7 +6758,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6356,7 +6773,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6383,7 +6805,48 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "sandbox_rate_limited",
+                    "message": "Too many sandbox sessions from this client."
+                  },
+                  "error": {
+                    "code": "sandbox_rate_limited",
+                    "details": {
+                      "code": "sandbox_rate_limited",
+                      "message": "Too many sandbox sessions from this client."
+                    },
+                    "message": "Too many sandbox sessions from this client.",
+                    "request_id": "req_example_0001",
+                    "retryable": true,
+                    "status": 429
+                  },
+                  "request_id": "req_example_0001"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitErrorResponse"
+                }
+              }
+            },
+            "description": "Request throttled or sandbox capacity reached. Honor Retry-After before retrying.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [],
@@ -6418,7 +6881,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6428,7 +6896,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6463,7 +6936,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6473,7 +6951,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6512,7 +6995,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6522,7 +7010,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6559,7 +7052,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6569,7 +7067,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6616,7 +7119,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6626,7 +7134,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6665,7 +7178,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6675,7 +7193,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6722,7 +7245,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6732,7 +7260,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6782,7 +7315,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6792,7 +7330,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6840,7 +7383,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6850,7 +7398,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6887,7 +7440,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6897,7 +7455,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6924,7 +7487,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -6963,7 +7531,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -6973,7 +7546,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -7088,7 +7666,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -7098,7 +7681,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -7192,7 +7780,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -7202,7 +7795,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -7254,7 +7852,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -7264,7 +7867,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -7326,7 +7934,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -7336,7 +7949,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [
@@ -7376,7 +7994,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "422": {
             "content": {
@@ -7386,7 +8009,12 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "security": [

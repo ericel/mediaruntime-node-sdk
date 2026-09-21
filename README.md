@@ -4,6 +4,8 @@
 
 Official Node.js SDK for the MediaRuntime asynchronous media API.
 
+Version `1.5.0` adds per-job webhook opt-out for [local development](docs/LOCAL_DEVELOPMENT.md) with hosted, billable processing. Existing webhook delivery remains the default.
+
 Version `1.4.0` adds [assisted clipping](docs/clipping.md): analyze once, review
 candidate ranges, then render with reusable source-timed captions.
 
@@ -591,3 +593,5 @@ Maintainer synchronization instructions live in
 
 See [Manual SDK and CLI releases](docs/RELEASING.md) for versioning, validation,
 Git identity, tag-triggered publication, registry verification, and release recovery.
+
+See [Local development with real processing](docs/LOCAL_DEVELOPMENT.md) for local-file uploads, polling, and per-job webhook opt-out.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0 — 2026-09-21
+
+- Add per-job webhook opt-out with unchanged default delivery, billing, and retention.
+- Expose the saved delivery policy on job polling responses.
+- Document hosted localhost development and restart-safe upload/submission retries.
+
 ## 1.4.0 — 2026-09-13
 
 - Add typed assisted clipping options and candidate-report retrieval for analyze,
