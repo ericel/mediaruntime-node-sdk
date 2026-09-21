@@ -267,3 +267,9 @@ and backend requirements. Do not include credentials or signed media URLs.
 Record all three commit SHAs, tags, Actions URLs, registry versions, GitHub release
 URLs, and clean-install checks in the release handoff. Confirm each repository has
 the expected clean working tree and `HEAD` matches `origin/main`.
+
+## Completed releases
+
+- [1.5.0: per-job webhook opt-out](releases/1.5.0.md) — package/tag commits, CI and publishing runs, registry verification, and the production smoke-test outcome.
+
+For webhook opt-out releases, deploy Firebase `on_job_webhook` before exposing the new flag in the gateway. Confirm `deliver_webhook` in the deployed OpenAPI, then publish clients. A real smoke test must verify the saved job policy and `webhookStatus: SKIPPED` with zero attempts; a successful processing result alone does not prove callback suppression.
