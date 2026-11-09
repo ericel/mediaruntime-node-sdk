@@ -11,6 +11,7 @@ import {
   ValidationError,
 } from "./errors.js";
 import type { FetchImplementation } from "./types.js";
+import { withAbort } from "./deadline.js";
 
 type RetryMode = "safe" | "idempotent-submit" | "never";
 
@@ -34,6 +35,9 @@ export interface TransportRequest {
   retry?: RetryMode;
   signal?: AbortSignal;
   operation?: "create-job" | string;
+  // Internal operation guard, used only by job waits. Standalone requests keep
+  // their existing per-attempt timeout and retry behavior.
+  checkActive?: () => void;
 }
 
 function normalizeApiBase(baseUrl: string): string {
@@ -262,6 +266,7 @@ export class Transport {
   }
 
   async request<T>(request: TransportRequest): Promise<T> {
+    request.checkActive?.();
     const authenticated = request.authenticated !== false;
     if (authenticated && !this.#apiKey && !this.#bearerToken) {
       throw new AuthenticationError("A MediaRuntime API key or bearer token is required for this operation", {
@@ -294,11 +299,14 @@ export class Transport {
     const retryable = canRetry(request);
     const attempts = retryable ? this.#maxRetries + 1 : 1;
     let lastConnectionError: unknown;
+    const receive = <Value>(promise: Promise<Value>): Promise<Value> =>
+      request.checkActive && request.signal ? withAbort(promise, request.signal) : promise;
 
     for (let attempt = 0; attempt < attempts; attempt += 1) {
+      request.checkActive?.();
       const attemptAbort = attemptSignal(request.signal, this.#timeoutMs);
       try {
-        const response = await this.#fetch(url, {
+        const response = await receive(this.#fetch(url, {
           method: request.method,
           headers,
           body,
@@ -306,15 +314,18 @@ export class Transport {
           // Authenticated data-plane routes are not expected to redirect. Refusing a
           // redirect prevents a custom X-API-Key from ever following to another origin.
           redirect: "error",
-        });
+        }));
+        request.checkActive?.();
 
         if (response.ok) {
           if (response.status === 204) return undefined as T;
-          const text = await response.text();
+          const text = await receive(response.text());
+          request.checkActive?.();
           return (text ? JSON.parse(text) : undefined) as T;
         }
 
-        const details = await responseDetails(response);
+        const details = await receive(responseDetails(response));
+        request.checkActive?.();
         const error = apiError(response, details, request);
         const shouldRetryResponse = response.status === 429 ||
           response.status >= 500 ||
@@ -328,6 +339,9 @@ export class Transport {
 
         throw error;
       } catch (error) {
+        // Check before classifying errors or starting backoff: the deadline may
+        // have elapsed before its timer callback got an opportunity to run.
+        request.checkActive?.();
         if (error instanceof MediaRuntimeApiError) throw error;
         if (request.signal?.aborted) throw request.signal.reason ?? error;
         if (attemptAbort.timedOut()) {

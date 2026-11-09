@@ -25,3 +25,6 @@ export {
 } from "./errors.js";
 
 export type * from "./types.js";
+
+export { evaluateFileReport } from "./security.js";
+export type { SecurityOptions, InspectionQuote, InspectionProfile, InspectionCheck, InspectionChecks, SecurityReport, SecurityReportResult, FileReportPolicy, FileReportDecision } from "./security.js";

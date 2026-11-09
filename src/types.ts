@@ -1,3 +1,4 @@
+import type { SecurityOptions, InspectionQuote } from "./security.js";
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type Metadata = Record<string, JsonValue>;
@@ -270,6 +271,7 @@ export interface CreateRecipeVersionParams {
 }
 
 interface CreateJobCommon {
+  security?: SecurityOptions;
   /** Frozen gateway aliases and explicit output recipes may be mixed in one job. */
   outputs?: Array<JobOutput | OutputAlias>;
   webhookUrl?: string;
@@ -304,6 +306,7 @@ export type CreateJobParams = CreateJobCommon &
   );
 
 export interface JobReceiptData {
+  inspectionQuote?: InspectionQuote;
   id: string;
   status: JobStatus;
   tier: string;
@@ -386,6 +389,9 @@ export interface JobMedia {
 }
 
 export interface JobDetails {
+  inspectionQuote?: InspectionQuote;
+  inspectionBilling?: JobBilling;
+  security?: { inspectionStatus: 'pending' | 'complete' | 'incomplete'; reportPath: string; reportExpired: boolean };
   /** Undefined when talking to an older gateway that does not expose this policy. */
   deliverWebhook?: boolean;
   id: string;
@@ -429,9 +435,11 @@ export interface ListJobsParams {
 }
 
 export interface WaitForJobOptions {
+  /** Total local wait budget, including requests, response bodies, retries, and polling delays. */
   timeoutMs?: number;
   initialDelayMs?: number;
   maxDelayMs?: number;
+  /** Cancels this local wait without cancelling the server-side job. */
   signal?: AbortSignal;
 }
 

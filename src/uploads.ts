@@ -14,6 +14,7 @@ import type { Transport } from "./transport.js";
 interface UploadFileOptions {
   contentType?: string;
   signal?: AbortSignal;
+  securityInspection?: boolean;
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -80,6 +81,7 @@ export class UploadsClient {
     filename: string,
     contentType = "application/octet-stream",
     signal?: AbortSignal,
+    securityInspection = false,
   ): Promise<UploadTarget> {
     if (!filename.trim()) {
       throw new ValidationError("filename must not be empty", { status: 400, field: "filename" });
@@ -87,7 +89,7 @@ export class UploadsClient {
     const value = await this.#transport.request<unknown>({
       method: "POST",
       path: "/upload-url",
-      body: { filename, content_type: contentType },
+      body: { filename, content_type: contentType, ...(securityInspection ? { security_inspection: true } : {}) },
       retry: "never",
       signal,
     });
@@ -106,20 +108,20 @@ export class UploadsClient {
     const filename = basename(absolutePath);
     const contentType = options.contentType ?? inferContentType(absolutePath);
     // The API supplies the signed destination and any storage-provider-specific headers.
-    const target = await this.createTarget(filename, contentType, options.signal);
+    const target = await this.createTarget(filename, contentType, options.signal, options.securityInspection);
     await this.putFile(target, absolutePath, info.size, options.signal);
     // Jobs consume fileUri; uploadUrl remains an expiring transport detail.
     return { ...target, filename, contentType };
   }
 
-  async resolveSource(source: Source, signal?: AbortSignal): Promise<string> {
+  async resolveSource(source: Source, signal?: AbortSignal, securityInspection = false): Promise<string> {
     // Hosted sources pass through; local paths upload and become private canonical URIs.
     if (source instanceof URL) {
       if (source.protocol === "http:" || source.protocol === "https:" || source.protocol === "gs:") {
         return source.toString();
       }
       if (source.protocol === "file:") {
-        return (await this.uploadFile(fileURLToPath(source), { signal })).fileUri;
+        return (await this.uploadFile(fileURLToPath(source), { signal, securityInspection })).fileUri;
       }
       throw new ValidationError(`Unsupported source protocol: ${source.protocol}`, {
         status: 400,
@@ -133,9 +135,9 @@ export class UploadsClient {
     }
     if (/^(https?:\/\/|gs:\/\/)/i.test(value)) return value;
     if (/^file:\/\//i.test(value)) {
-      return (await this.uploadFile(fileURLToPath(new URL(value)), { signal })).fileUri;
+      return (await this.uploadFile(fileURLToPath(new URL(value)), { signal, securityInspection })).fileUri;
     }
-    return (await this.uploadFile(value, { signal })).fileUri;
+    return (await this.uploadFile(value, { signal, securityInspection })).fileUri;
   }
 
   private async putFile(

@@ -31,6 +31,7 @@ function recipeName(value: string): string {
 }
 
 function serializeTemplate(template: RecipeTemplate): UnknownRecord {
+  if ('security' in template) throw new ValidationError('Security inspection is unavailable in recipes', { status: 400, field: 'security' });
   // Keep all camelCase-to-wire translation at this SDK boundary.
   const value: UnknownRecord = {};
   if (template.outputs !== undefined) value.outputs = template.outputs.map(serializeOutput);

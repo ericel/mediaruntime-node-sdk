@@ -1,5 +1,7 @@
+import { serializeSecurity, parseSecurityReport, parseInspectionQuote, type SecurityOptions, type InspectionQuote, type SecurityReportResult } from "./security.js";
 import { randomUUID } from "node:crypto";
 import { JobWaitTimeoutError, ValidationError } from "./errors.js";
+import { withDeadline } from "./deadline.js";
 import type {
   CreateJobParams,
   ClipCandidatesResult,
@@ -61,6 +63,13 @@ function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
 }
 
 function validateCreate(params: CreateJobParams): void {
+  if (params.security !== undefined) {
+    serializeSecurity(params.security);
+    if (params.recipe !== undefined || (params.security.enabled && (params.inputs !== undefined || params.moderation !== undefined || params.watermark !== undefined ||
+      Boolean(params.outputs?.length) !== (params.security.mode === 'enforce')))) {
+      throw new ValidationError('Invalid inspection/processing combination', { status: 400, field: 'security' });
+    }
+  }
   if (params.deliverWebhook !== undefined && typeof params.deliverWebhook !== "boolean") {
     throw new ValidationError("deliverWebhook must be a boolean", { status: 400, field: "deliverWebhook" });
   }
@@ -98,7 +107,7 @@ function validateCreate(params: CreateJobParams): void {
       });
     }
   }
-  if (params.recipe === undefined && (params.outputs?.length ?? 0) === 0 && params.moderation?.enabled !== true) {
+  if (params.recipe === undefined && (params.outputs?.length ?? 0) === 0 && params.moderation?.enabled !== true && params.security?.enabled !== true) {
     throw new ValidationError(
       "Provide at least one output, or enable moderation for an analysis-only job",
       { status: 400, field: "outputs" },
@@ -124,6 +133,7 @@ export class Job {
   readonly outputs: JobReceiptData["outputs"];
   readonly recipe: JobReceiptData["recipe"];
   readonly message: string;
+  readonly inspectionQuote?: InspectionQuote;
 
   constructor(data: JobReceiptData, jobs: JobsClient) {
     this.#jobs = jobs;
@@ -134,6 +144,7 @@ export class Job {
     this.outputs = data.outputs;
     this.recipe = data.recipe;
     this.message = data.message;
+    this.inspectionQuote = data.inspectionQuote;
   }
 
   refresh(options: { signal?: AbortSignal } = {}): Promise<JobDetails> {
@@ -153,6 +164,7 @@ export class Job {
       outputs: this.outputs,
       recipe: this.recipe,
       message: this.message,
+      ...(this.inspectionQuote ? { inspectionQuote: this.inspectionQuote } : {}),
     };
   }
 }
@@ -174,7 +186,7 @@ export class JobsClient {
     let resolved: { source?: string; inputs?: ResolvedBatchInput[] };
     if ("source" in params && params.source !== undefined) {
       // Local files upload transparently; HTTP(S), signed, and gs:// sources pass through.
-      resolved = { source: await this.#uploads.resolveSource(params.source, params.signal) };
+      resolved = { source: await this.#uploads.resolveSource(params.source, params.signal, params.security?.enabled) };
     } else {
       const inputs: ResolvedBatchInput[] = [];
       for (const input of params.inputs) {
@@ -200,12 +212,20 @@ export class JobsClient {
   }
 
   async get(jobId: string, options: { signal?: AbortSignal } = {}): Promise<JobDetails> {
+    return this.#get(jobId, options);
+  }
+
+  async #get(
+    jobId: string,
+    options: { signal?: AbortSignal; checkActive?: () => void },
+  ): Promise<JobDetails> {
     const id = jobPathId(jobId);
     const value = await this.#transport.request<unknown>({
       method: "GET",
       path: `/jobs/${id}`,
       retry: "safe",
       signal: options.signal,
+      checkActive: options.checkActive,
     });
     return parseJobDetails(value);
   }
@@ -229,19 +249,46 @@ export class JobsClient {
       throw new TypeError("wait timing options must be non-negative and timeoutMs must be positive");
     }
 
-    const deadline = Date.now() + timeoutMs;
-    let nextDelay = initialDelayMs;
     let lastJob: JobDetails | null = null;
-    while (true) {
-      lastJob = await this.get(jobId, { signal: options.signal });
-      if (TERMINAL_STATUSES.has(String(lastJob.status).toUpperCase())) return lastJob;
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new JobWaitTimeoutError(timeoutMs, lastJob);
-      // Jitter prevents many workers polling the same account in lockstep.
-      const jittered = Math.floor(nextDelay * (0.85 + Math.random() * 0.3));
-      await delay(Math.min(remaining, jittered), options.signal);
-      nextDelay = Math.min(maxDelayMs, Math.max(1, nextDelay * 1.5));
+    return withDeadline(timeoutMs, options.signal, () => new JobWaitTimeoutError(timeoutMs, lastJob),
+      async (signal, checkActive) => {
+        let nextDelay = initialDelayMs;
+        while (true) {
+          checkActive();
+          const job = await this.#get(jobId, { signal, checkActive });
+          // A late result must neither complete the wait nor replace its last
+          // successfully decoded, pre-deadline snapshot.
+          checkActive();
+          lastJob = job;
+          if (TERMINAL_STATUSES.has(String(job.status).toUpperCase())) return job;
+          const jittered = Math.floor(nextDelay * (0.85 + Math.random() * 0.3));
+          await delay(jittered, signal);
+          nextDelay = Math.min(maxDelayMs, Math.max(1, nextDelay * 1.5));
+        }
+      });
+  }
+
+  async estimateSecurity(options: SecurityOptions, request: { signal?: AbortSignal } = {}): Promise<InspectionQuote> {
+    return parseInspectionQuote(await this.#transport.request<unknown>({ method: 'POST', path: '/security/estimate',
+      body: serializeSecurity(options), signal: request.signal, retry: 'safe' }));
+  }
+
+  async getSecurityReport(jobId: string, options: { signal?: AbortSignal } = {}): Promise<SecurityReportResult> {
+    return parseSecurityReport(await this.#transport.request<unknown>({ method: 'GET', path: `/jobs/${jobPathId(jobId)}/security-report`,
+      signal: options.signal, retry: 'safe' }));
+  }
+
+  async cancelSecurityInspection(jobId: string, options: { signal?: AbortSignal } = {}): Promise<void> {
+    await this.#transport.request({ method: 'POST', path: `/jobs/${jobPathId(jobId)}/security-cancel`, signal: options.signal, retry: 'safe' });
+  }
+
+  async getSecurityDerivative(jobId: string, options: { signal?: AbortSignal } = {}): Promise<{ downloadUrl: string; expiresInSeconds: number }> {
+    const value = await this.#transport.request<{ download_url: string; expires_in_seconds: number }>({ method: 'GET', path: `/jobs/${jobPathId(jobId)}/security-derivative`, signal: options.signal, retry: 'safe' });
+    const url = typeof value.download_url === 'string' ? URL.parse(value.download_url) : null;
+    if (!url || url.protocol !== 'https:' || url.username || url.password || !Number.isSafeInteger(value.expires_in_seconds) || value.expires_in_seconds < 1 || value.expires_in_seconds > 300) {
+      throw new ValidationError('Invalid derivative response', { status: 502, field: 'security' });
     }
+    return { downloadUrl: value.download_url, expiresInSeconds: value.expires_in_seconds };
   }
 
   async getModeration(

@@ -176,6 +176,21 @@ upload can be added after measurement.
 Default transport timeout: 30 seconds per attempt. Default maximum retries: two after the
 initial attempt.
 
+`jobs.wait()` and `Job.wait()` have a separate total `timeoutMs` budget (default:
+300,000 ms). It includes active requests, response-body reads, transport retry
+delays, and polling delays. Expiration aborts local requests and rejects with
+`JobWaitTimeoutError`, preserving the configured budget and the last successfully
+decoded job observed before expiration, or `null` if none was observed. No new
+poll or retry starts at or after the deadline, even if its timer callback has not
+yet run. Terminal responses observed at or after expiration cannot turn a timeout
+into success.
+
+Caller cancellation before expiration retains the caller's abort reason. Earlier
+API errors and exhausted transport errors retain their existing types. Concurrent
+waits have independent budgets; finishing one does not abort another or the
+caller's signal. A local wait timeout does not cancel the remote job. Standalone
+`jobs.get()` retains the transport's per-attempt timeout and retry policy.
+
 Retryable failures are network errors, `429`, and `5xx`. A typed
 `idempotency_in_progress` `409` is also retryable for job submission because it can be the
 immediate replay of a request whose response was lost while the gateway finishes its

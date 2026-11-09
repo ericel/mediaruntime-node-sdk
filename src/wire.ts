@@ -1,3 +1,4 @@
+import { serializeSecurity, parseInspectionQuote } from "./security.js";
 import { ValidationError } from "./errors.js";
 import type {
   BatchInput,
@@ -357,6 +358,7 @@ export function serializeCreateJob(
     });
   }
   if (params.outputs !== undefined) body.outputs = params.outputs.map(serializeOutput);
+  if (params.security !== undefined) body.security = serializeSecurity(params.security);
   setDefined(body, "recipe", params.recipe);
   setDefined(body, "webhook_url", params.webhookUrl);
   setDefined(body, "deliver_webhook", params.deliverWebhook);
@@ -393,6 +395,7 @@ export function parseJobReceipt(value: unknown): JobReceiptData {
     })
     : [];
   return {
+    ...(data.inspection_quote ? { inspectionQuote: parseInspectionQuote(data.inspection_quote) } : {}),
     id: String(data.job_id ?? ""),
     status: status(data.status),
     tier: String(data.tier ?? ""),
@@ -518,6 +521,13 @@ export function parseJobDetails(value: unknown): JobDetails {
   const data = record(value);
   const metadata = record(data.metadata) as Metadata;
   return {
+    ...(data.inspection_quote ? { inspectionQuote: parseInspectionQuote(data.inspection_quote) } : {}),
+    ...(data.inspection_billing ? { inspectionBilling: parseBilling(data.inspection_billing) } : {}),
+    ...(data.security ? { security: {
+      inspectionStatus: ['pending', 'complete', 'incomplete'].includes(String(record(data.security).inspection_status)) ? record(data.security).inspection_status as 'pending' | 'complete' | 'incomplete' : 'incomplete' as const,
+      reportPath: String(record(data.security).report_path || ''),
+      reportExpired: record(data.security).report_expired === true,
+    } } : {}),
     ...(typeof data.deliver_webhook === "boolean" ? { deliverWebhook: data.deliver_webhook } : {}),
     id: String(data.job_id ?? ""),
     status: status(data.status),

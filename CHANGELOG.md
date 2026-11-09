@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.1 — 2026-11-09
+
+- Enforce the total job-wait deadline across requests, response-body consumption,
+  transport retries, and polling delays. Preserve caller cancellation reasons and
+  the last job observed before expiration, and release timers and listeners when
+  a wait settles. Standalone job reads and submission retries are unchanged.
+- Add typed file-inspection quotes, job options, reports, cancellation, and sanitized
+  derivative retrieval, with dedicated quarantined uploads for local inspection inputs.
+- Add backend application policy evaluation for format allowlists, scan freshness,
+  complete inspection evidence, ZIP entry coverage, and sanitized derivatives.
+- Preserve bounded archive, image, and audio diagnostics, including CRC failures,
+  malformed structures, incomplete coverage, and unsupported validation.
+- Refresh the public contract snapshot and document account enablement, paid
+  inspection, enforcement prerequisites, and application policy boundaries.
+- Add deterministic wait-deadline regressions, inspection policy tests, and optional
+  image/audio report fixture checks. See [release notes](docs/releases/1.5.1.md).
+
 ## 1.5.0 — 2026-09-21
 
 - Add per-job webhook opt-out with unchanged default delivery, billing, and retention.

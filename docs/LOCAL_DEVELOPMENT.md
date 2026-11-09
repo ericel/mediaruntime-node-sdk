@@ -17,6 +17,13 @@ Poll the saved job ID and use the returned bundle download URL when complete.
 A polling timeout does not cancel a job: resume polling that ID instead of
 submitting another paid job.
 
+The `timeoutMs` budget on `media.jobs.wait()` and `job.wait()` covers the entire
+local wait, including in-flight requests, response-body reads, retry backoff, and
+polling delays. On expiration, `JobWaitTimeoutError.lastJob` contains the last job
+decoded before the deadline (or `null`). The SDK aborts its outstanding request
+and stops polling; it does not cancel the job on the server. An injected fetch
+implementation must honor its `AbortSignal` to stop its own underlying I/O.
+
 Node SDK 1.5.0 or newer:
 
 ```js

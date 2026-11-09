@@ -73,6 +73,167 @@
         "title": "AnimationConfig",
         "type": "object"
       },
+      "ArchiveEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "$ref": "#/components/schemas/InspectionChecks"
+          },
+          "compressed_bytes": {
+            "maximum": 536870912.0,
+            "minimum": 0.0,
+            "title": "Compressed Bytes",
+            "type": "integer"
+          },
+          "depth": {
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Depth",
+            "type": "integer"
+          },
+          "detected_format": {
+            "default": "unknown",
+            "enum": [
+              "jpeg",
+              "png",
+              "webp",
+              "gif",
+              "bmp",
+              "tiff",
+              "avif",
+              "mp4",
+              "mov",
+              "webm",
+              "matroska",
+              "mp3",
+              "wav",
+              "flac",
+              "ogg",
+              "aac",
+              "aiff",
+              "caf",
+              "zip",
+              "pdf",
+              "executable",
+              "svg",
+              "html",
+              "manifest",
+              "unknown"
+            ],
+            "title": "Detected Format",
+            "type": "string"
+          },
+          "encrypted": {
+            "default": false,
+            "title": "Encrypted",
+            "type": "boolean"
+          },
+          "expanded_bytes": {
+            "maximum": 1073741824.0,
+            "minimum": 0.0,
+            "title": "Expanded Bytes",
+            "type": "integer"
+          },
+          "index": {
+            "maximum": 256.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 128,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "depth",
+          "name",
+          "compressed_bytes",
+          "expanded_bytes",
+          "checks"
+        ],
+        "title": "ArchiveEntry",
+        "type": "object"
+      },
+      "ArchiveReport": {
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ArchiveEntry"
+            },
+            "maxItems": 32,
+            "title": "Entries",
+            "type": "array"
+          },
+          "entries_attempted": {
+            "anyOf": [
+              {
+                "maximum": 256.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Entries attempted; explicit alias of entries_inspected. Absent in older reports.",
+            "title": "Entries Attempted"
+          },
+          "entries_complete": {
+            "title": "Entries Complete",
+            "type": "boolean"
+          },
+          "entries_fully_inspected": {
+            "anyOf": [
+              {
+                "maximum": 256.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Entries with all requested checks completed, including negative results; not a safety verdict. Absent in older reports.",
+            "title": "Entries Fully Inspected"
+          },
+          "entries_inspected": {
+            "description": "Number of non-directory entries attempted, including entries rejected before decompression or scanning. Includes visited nested archives; this is not a count of fully inspected or safe entries. Use entries_complete and per-entry checks to assess coverage.",
+            "maximum": 256.0,
+            "minimum": 0.0,
+            "title": "Entries Inspected",
+            "type": "integer"
+          },
+          "entries_total": {
+            "maximum": 10000000.0,
+            "minimum": 0.0,
+            "title": "Entries Total",
+            "type": "integer"
+          },
+          "entries_truncated": {
+            "title": "Entries Truncated",
+            "type": "boolean"
+          },
+          "expanded_bytes": {
+            "maximum": 1073741824.0,
+            "minimum": 0.0,
+            "title": "Expanded Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries_total",
+          "entries_inspected",
+          "expanded_bytes",
+          "entries_complete",
+          "entries_truncated"
+        ],
+        "title": "ArchiveReport",
+        "type": "object"
+      },
       "ArchivedRecipeResponse": {
         "properties": {
           "latest_version": {
@@ -791,7 +952,7 @@
             "description": "Optional premium moderation request for image or video inputs."
           },
           "outputs": {
-            "description": "Output recipes as explicit objects or frozen alias strings. May be empty ONLY for an analysis-only job — currently a job with moderation enabled, which produces a verdict and no media.",
+            "description": "Output recipes as explicit objects or frozen alias strings. May be empty ONLY for an analysis-only job with moderation or security inspection enabled, which produces a report and no media. Security inspection is disabled by default.",
             "items": {
               "anyOf": [
                 {
@@ -820,6 +981,16 @@
             ],
             "description": "Hosted recipe reference, optionally pinned as name@version.",
             "title": "Recipe"
+          },
+          "security": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecurityOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "source": {
             "anyOf": [
@@ -1096,6 +1267,554 @@
           "format"
         ],
         "title": "ImageRendition",
+        "type": "object"
+      },
+      "InspectionCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "complete": {
+            "default": false,
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "coverage": {
+            "default": "none",
+            "enum": [
+              "none",
+              "signature",
+              "antivirus",
+              "antivirus_partial",
+              "metadata",
+              "image_verify",
+              "full_decode",
+              "zip_entries",
+              "image_reencode"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "observed",
+              "not_requested",
+              "not_applicable",
+              "short_circuit",
+              "not_started",
+              "unsupported_format",
+              "unsupported_compression",
+              "structural_validation_failed",
+              "deep_validation_failed",
+              "malformed_data",
+              "wav_riff_size_mismatch",
+              "wav_chunk_truncated",
+              "wav_required_chunk_missing",
+              "wav_format_invalid",
+              "wav_adpcm_block_invalid",
+              "id3_header_invalid",
+              "id3_tag_truncated",
+              "mp3_frame_header_invalid",
+              "mp3_frame_truncated",
+              "flac_streaminfo_invalid",
+              "flac_metadata_truncated",
+              "flac_streaminfo_missing",
+              "ogg_page_crc_mismatch",
+              "ogg_page_truncated",
+              "ogg_page_sequence_invalid",
+              "ogg_end_marker_missing",
+              "aac_frame_length_invalid",
+              "aac_frame_truncated",
+              "aac_frame_header_invalid",
+              "mp4_box_size_invalid",
+              "mp4_box_truncated",
+              "mp4_required_box_missing",
+              "png_chunk_crc_mismatch",
+              "jpeg_segment_length_invalid",
+              "jpeg_segment_truncated",
+              "jpeg_end_marker_missing",
+              "jpeg_frame_header_missing",
+              "png_chunk_truncated",
+              "png_ihdr_length_invalid",
+              "png_duplicate_chunk",
+              "png_chunk_order_invalid",
+              "png_required_chunk_missing",
+              "webp_riff_size_mismatch",
+              "webp_chunk_truncated",
+              "webp_chunk_padding_invalid",
+              "webp_extended_header_invalid",
+              "webp_image_data_missing",
+              "archive_crc_mismatch",
+              "archive_decompression_failed",
+              "archive_structure_invalid",
+              "type_mismatch",
+              "ambiguous_type",
+              "threat_detected",
+              "encrypted_content",
+              "unsafe_archive_path",
+              "archive_symlink",
+              "nested_archive_limit",
+              "entry_limit",
+              "expanded_byte_limit",
+              "compression_ratio_limit",
+              "policy_limit",
+              "decode_limit",
+              "scanner_unavailable",
+              "scanner_error",
+              "signatures_stale",
+              "signatures_invalid",
+              "timeout",
+              "resource_limit",
+              "isolation_unavailable",
+              "invalid_report",
+              "ingest_failed",
+              "input_byte_limit",
+              "snapshot_mismatch",
+              "cancelled",
+              "attempt_invalidated",
+              "attempts_exhausted",
+              "deadline_exceeded"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested": {
+            "default": true,
+            "title": "Requested",
+            "type": "boolean"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "enum": [
+                  "identified",
+                  "ambiguous",
+                  "valid",
+                  "malformed",
+                  "detected",
+                  "no_threat_detected",
+                  "inspected",
+                  "reencoded",
+                  "not_validated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "error",
+              "unsupported",
+              "not_run"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "InspectionCheck",
+        "type": "object"
+      },
+      "InspectionChecks": {
+        "additionalProperties": false,
+        "properties": {
+          "archive": {
+            "$ref": "#/components/schemas/InspectionCheck"
+          },
+          "deep_validation": {
+            "$ref": "#/components/schemas/InspectionCheck"
+          },
+          "identification": {
+            "$ref": "#/components/schemas/InspectionCheck"
+          },
+          "malware": {
+            "$ref": "#/components/schemas/InspectionCheck"
+          },
+          "sanitization": {
+            "$ref": "#/components/schemas/InspectionCheck"
+          },
+          "structure": {
+            "$ref": "#/components/schemas/InspectionCheck"
+          }
+        },
+        "required": [
+          "identification",
+          "malware",
+          "structure",
+          "deep_validation",
+          "archive"
+        ],
+        "title": "InspectionChecks",
+        "type": "object"
+      },
+      "InspectionFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "byte_offset": {
+            "anyOf": [
+              {
+                "maximum": 536870912.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Byte Offset"
+          },
+          "check": {
+            "enum": [
+              "identification",
+              "malware",
+              "structure",
+              "deep_validation",
+              "archive",
+              "sanitization"
+            ],
+            "title": "Check",
+            "type": "string"
+          },
+          "chunk": {
+            "anyOf": [
+              {
+                "maxLength": 4,
+                "pattern": "^[A-Za-z0-9 ]{4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk"
+          },
+          "code": {
+            "enum": [
+              "observed",
+              "not_requested",
+              "not_applicable",
+              "short_circuit",
+              "not_started",
+              "unsupported_format",
+              "unsupported_compression",
+              "structural_validation_failed",
+              "deep_validation_failed",
+              "malformed_data",
+              "wav_riff_size_mismatch",
+              "wav_chunk_truncated",
+              "wav_required_chunk_missing",
+              "wav_format_invalid",
+              "wav_adpcm_block_invalid",
+              "id3_header_invalid",
+              "id3_tag_truncated",
+              "mp3_frame_header_invalid",
+              "mp3_frame_truncated",
+              "flac_streaminfo_invalid",
+              "flac_metadata_truncated",
+              "flac_streaminfo_missing",
+              "ogg_page_crc_mismatch",
+              "ogg_page_truncated",
+              "ogg_page_sequence_invalid",
+              "ogg_end_marker_missing",
+              "aac_frame_length_invalid",
+              "aac_frame_truncated",
+              "aac_frame_header_invalid",
+              "mp4_box_size_invalid",
+              "mp4_box_truncated",
+              "mp4_required_box_missing",
+              "png_chunk_crc_mismatch",
+              "jpeg_segment_length_invalid",
+              "jpeg_segment_truncated",
+              "jpeg_end_marker_missing",
+              "jpeg_frame_header_missing",
+              "png_chunk_truncated",
+              "png_ihdr_length_invalid",
+              "png_duplicate_chunk",
+              "png_chunk_order_invalid",
+              "png_required_chunk_missing",
+              "webp_riff_size_mismatch",
+              "webp_chunk_truncated",
+              "webp_chunk_padding_invalid",
+              "webp_extended_header_invalid",
+              "webp_image_data_missing",
+              "archive_crc_mismatch",
+              "archive_decompression_failed",
+              "archive_structure_invalid",
+              "type_mismatch",
+              "ambiguous_type",
+              "threat_detected",
+              "encrypted_content",
+              "unsafe_archive_path",
+              "archive_symlink",
+              "nested_archive_limit",
+              "entry_limit",
+              "expanded_byte_limit",
+              "compression_ratio_limit",
+              "policy_limit",
+              "decode_limit",
+              "scanner_unavailable",
+              "scanner_error",
+              "signatures_stale",
+              "signatures_invalid",
+              "timeout",
+              "resource_limit",
+              "isolation_unavailable",
+              "invalid_report",
+              "ingest_failed",
+              "input_byte_limit",
+              "snapshot_mismatch",
+              "cancelled",
+              "attempt_invalidated",
+              "attempts_exhausted",
+              "deadline_exceeded"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "entry_index": {
+            "anyOf": [
+              {
+                "maximum": 256.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Index"
+          },
+          "marker": {
+            "anyOf": [
+              {
+                "maxLength": 4,
+                "pattern": "^FF[A-F0-9]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marker"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "enum": [
+                  "WAVE RIFF size does not match the available file bytes",
+                  "WAVE chunk extends beyond its RIFF container",
+                  "WAVE required format or data chunk is missing",
+                  "WAVE format fields or sample alignment are inconsistent",
+                  "WAVE IMA ADPCM block has an invalid step index or reserved field",
+                  "ID3 tag header has invalid size encoding or reserved fields",
+                  "ID3 tag extends beyond the available file bytes",
+                  "MP3 frame header contains invalid framing fields",
+                  "MP3 frame ends before its declared frame length",
+                  "FLAC STREAMINFO length or fields are invalid",
+                  "FLAC metadata block extends beyond the available file bytes",
+                  "FLAC first metadata block is not STREAMINFO",
+                  "Ogg page failed CRC verification",
+                  "Ogg page ends before its header or segment data is complete",
+                  "Ogg page sequence is inconsistent within its logical stream",
+                  "Ogg logical stream is missing its end-of-stream flag",
+                  "AAC ADTS frame length is smaller than its header",
+                  "AAC ADTS frame ends before its declared frame length",
+                  "AAC ADTS header contains invalid framing fields",
+                  "MP4 box size is smaller than its header",
+                  "MP4 box extends beyond the available file bytes",
+                  "MP4 required movie or media-data box is missing",
+                  "PNG image header failed CRC-32 verification",
+                  "PNG chunk failed CRC-32 verification",
+                  "JPEG segment length is smaller than its length field",
+                  "JPEG segment ends before its declared payload is complete",
+                  "JPEG end-of-image marker is missing",
+                  "JPEG frame header is missing",
+                  "PNG chunk ends before its declared data and CRC are complete",
+                  "PNG image header payload must contain exactly 13 bytes",
+                  "PNG contains a duplicate chunk that must occur only once",
+                  "PNG chunks are not in the required order",
+                  "PNG required chunk is missing",
+                  "WebP RIFF size does not match the available file bytes",
+                  "WebP chunk extends beyond its RIFF container",
+                  "WebP odd-length chunk padding must be zero",
+                  "WebP extended header has an invalid length or reserved fields",
+                  "WebP container has no image-data chunk"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "required": [
+          "code",
+          "check"
+        ],
+        "title": "InspectionFinding",
+        "type": "object"
+      },
+      "InspectionProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "deep_validation": {
+            "title": "Deep Validation",
+            "type": "boolean"
+          },
+          "id": {
+            "const": "file_inspection_v1",
+            "default": "file_inspection_v1",
+            "title": "Id",
+            "type": "string"
+          },
+          "sanitization": {
+            "anyOf": [
+              {
+                "enum": [
+                  "png",
+                  "jpeg"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sanitization"
+          },
+          "tier": {
+            "enum": [
+              "standard",
+              "premium"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "version": {
+            "const": "1",
+            "default": "1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier",
+          "deep_validation"
+        ],
+        "title": "InspectionProfile",
+        "type": "object"
+      },
+      "InspectionQuote": {
+        "additionalProperties": false,
+        "properties": {
+          "base_cents": {
+            "minimum": 1.0,
+            "title": "Base Cents",
+            "type": "integer"
+          },
+          "currency": {
+            "const": "USD",
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
+          },
+          "limits": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Limits",
+            "type": "object"
+          },
+          "max_input_bytes": {
+            "maximum": 536870912.0,
+            "minimum": 1.0,
+            "title": "Max Input Bytes",
+            "type": "integer"
+          },
+          "pricing_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Pricing Version",
+            "type": "string"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/InspectionProfile"
+          },
+          "quoted_amount_cents": {
+            "maximum": 10000000.0,
+            "minimum": 1.0,
+            "title": "Quoted Amount Cents",
+            "type": "integer"
+          },
+          "unit_bytes": {
+            "minimum": 1.0,
+            "title": "Unit Bytes",
+            "type": "integer"
+          },
+          "unit_rate_cents": {
+            "minimum": 1.0,
+            "title": "Unit Rate Cents",
+            "type": "integer"
+          },
+          "unsupported_sanitization_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InspectionRate"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pinned inspection-only rate used when requested sanitization is unsupported. The quoted amount remains the reservation ceiling; null retains the original profile rate."
+          }
+        },
+        "required": [
+          "pricing_version",
+          "profile",
+          "unit_bytes",
+          "base_cents",
+          "unit_rate_cents",
+          "max_input_bytes",
+          "quoted_amount_cents",
+          "limits"
+        ],
+        "title": "InspectionQuote",
+        "type": "object"
+      },
+      "InspectionRate": {
+        "additionalProperties": false,
+        "properties": {
+          "base_cents": {
+            "minimum": 1.0,
+            "title": "Base Cents",
+            "type": "integer"
+          },
+          "unit_bytes": {
+            "minimum": 1.0,
+            "title": "Unit Bytes",
+            "type": "integer"
+          },
+          "unit_rate_cents": {
+            "minimum": 1.0,
+            "title": "Unit Rate Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unit_bytes",
+          "base_cents",
+          "unit_rate_cents"
+        ],
+        "title": "InspectionRate",
         "type": "object"
       },
       "JobArtifactInfo": {
@@ -1979,6 +2698,16 @@
       },
       "JobResponse": {
         "properties": {
+          "inspection_quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InspectionQuote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "job_id": {
             "title": "Job Id",
             "type": "string"
@@ -2083,6 +2812,26 @@
             ],
             "title": "Error"
           },
+          "inspection_billing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobBillingInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspection_quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InspectionQuote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "job_id": {
             "title": "Job Id",
             "type": "string"
@@ -2116,6 +2865,16 @@
             ],
             "description": "Exact hosted recipe version materialized for this job, when used.",
             "title": "Recipe"
+          },
+          "security": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecuritySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "started_at": {
             "anyOf": [
@@ -3564,7 +4323,10 @@
             "type": "integer"
           },
           "media_type": {
-            "const": "image/webp",
+            "enum": [
+              "image/webp",
+              "image/png"
+            ],
             "title": "Media Type",
             "type": "string"
           },
@@ -3646,7 +4408,10 @@
             "type": "integer"
           },
           "media_type": {
-            "const": "image/webp",
+            "enum": [
+              "image/webp",
+              "image/png"
+            ],
             "title": "Media Type",
             "type": "string"
           },
@@ -3839,6 +4604,537 @@
           "can_run"
         ],
         "title": "SandboxSessionResponse",
+        "type": "object"
+      },
+      "SanitizationResult": {
+        "additionalProperties": false,
+        "properties": {
+          "format": {
+            "enum": [
+              "png",
+              "jpeg"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "metadata_removed": {
+            "const": true,
+            "default": true,
+            "title": "Metadata Removed",
+            "type": "boolean"
+          },
+          "recipe": {
+            "const": "image_reencode_v1",
+            "default": "image_reencode_v1",
+            "title": "Recipe",
+            "type": "string"
+          },
+          "reinspection_completed": {
+            "const": true,
+            "default": true,
+            "title": "Reinspection Completed",
+            "type": "boolean"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "maximum": 4194304.0,
+            "minimum": 1.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "source_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "source_sha256",
+          "sha256",
+          "size_bytes"
+        ],
+        "title": "SanitizationResult",
+        "type": "object"
+      },
+      "SecurityCancelResponse": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "cancellation_requested",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "SecurityCancelResponse",
+        "type": "object"
+      },
+      "SecurityDerivativeResponse": {
+        "properties": {
+          "download_url": {
+            "title": "Download Url",
+            "type": "string"
+          },
+          "expires_in_seconds": {
+            "default": 300,
+            "title": "Expires In Seconds",
+            "type": "integer"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "download_url"
+        ],
+        "title": "SecurityDerivativeResponse",
+        "type": "object"
+      },
+      "SecurityFile": {
+        "additionalProperties": false,
+        "properties": {
+          "ambiguous": {
+            "default": false,
+            "title": "Ambiguous",
+            "type": "boolean"
+          },
+          "declarations_untrusted": {
+            "const": true,
+            "default": true,
+            "title": "Declarations Untrusted",
+            "type": "boolean"
+          },
+          "declared_mime": {
+            "anyOf": [
+              {
+                "maxLength": 96,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declared Mime"
+          },
+          "detected_format": {
+            "default": "unknown",
+            "enum": [
+              "jpeg",
+              "png",
+              "webp",
+              "gif",
+              "bmp",
+              "tiff",
+              "avif",
+              "mp4",
+              "mov",
+              "webm",
+              "matroska",
+              "mp3",
+              "wav",
+              "flac",
+              "ogg",
+              "aac",
+              "aiff",
+              "caf",
+              "zip",
+              "pdf",
+              "executable",
+              "svg",
+              "html",
+              "manifest",
+              "unknown"
+            ],
+            "title": "Detected Format",
+            "type": "string"
+          },
+          "detected_mime": {
+            "default": "application/octet-stream",
+            "maxLength": 96,
+            "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$",
+            "title": "Detected Mime",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "maximum": 536870912.0,
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "supplied_filename": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplied Filename"
+          }
+        },
+        "required": [
+          "size_bytes",
+          "sha256"
+        ],
+        "title": "SecurityFile",
+        "type": "object"
+      },
+      "SecurityOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "declared_mime": {
+            "anyOf": [
+              {
+                "maxLength": 96,
+                "pattern": "^[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declared Mime"
+          },
+          "deep_validation": {
+            "default": false,
+            "title": "Deep Validation",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_charge_cents": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Charge Cents"
+          },
+          "max_input_bytes": {
+            "default": 20971520,
+            "maximum": 536870912.0,
+            "minimum": 1.0,
+            "title": "Max Input Bytes",
+            "type": "integer"
+          },
+          "mode": {
+            "default": "inspect",
+            "enum": [
+              "inspect",
+              "enforce"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "pricing_version": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_.-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Version"
+          },
+          "profile": {
+            "const": "file_inspection_v1",
+            "default": "file_inspection_v1",
+            "title": "Profile",
+            "type": "string"
+          },
+          "sanitization": {
+            "anyOf": [
+              {
+                "enum": [
+                  "png",
+                  "jpeg"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sanitization"
+          },
+          "supplied_filename": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "pattern": "^[^\\x00-\\x1f\\x7f/\\\\]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplied Filename"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "standard",
+                  "premium"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          }
+        },
+        "title": "SecurityOptions",
+        "type": "object"
+      },
+      "SecurityReport": {
+        "additionalProperties": false,
+        "properties": {
+          "archive": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArchiveReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attempt_id": {
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "checks": {
+            "$ref": "#/components/schemas/InspectionChecks"
+          },
+          "completed_at": {
+            "minimum": 1.0,
+            "title": "Completed At",
+            "type": "integer"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecurityFile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/InspectionFinding"
+            },
+            "maxItems": 64,
+            "title": "Findings",
+            "type": "array"
+          },
+          "findings_truncated": {
+            "default": false,
+            "title": "Findings Truncated",
+            "type": "boolean"
+          },
+          "inspection_status": {
+            "enum": [
+              "complete",
+              "incomplete"
+            ],
+            "title": "Inspection Status",
+            "type": "string"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/InspectionProfile"
+          },
+          "report_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Report Version",
+            "type": "string"
+          },
+          "sanitization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SanitizationResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scanner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecurityScanner"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "started_at": {
+            "minimum": 1.0,
+            "title": "Started At",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "inspection_status",
+          "profile",
+          "attempt_id",
+          "started_at",
+          "completed_at",
+          "checks"
+        ],
+        "title": "SecurityReport",
+        "type": "object"
+      },
+      "SecurityReportResponse": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecurityReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "available"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "SecurityReportResponse",
+        "type": "object"
+      },
+      "SecurityScanner": {
+        "additionalProperties": false,
+        "properties": {
+          "database_built_at": {
+            "minimum": 1.0,
+            "title": "Database Built At",
+            "type": "integer"
+          },
+          "database_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Database Sha256",
+            "type": "string"
+          },
+          "database_version": {
+            "minimum": 1.0,
+            "title": "Database Version",
+            "type": "integer"
+          },
+          "engine": {
+            "const": "ClamAV",
+            "default": "ClamAV",
+            "title": "Engine",
+            "type": "string"
+          },
+          "max_file_bytes": {
+            "maximum": 536870912.0,
+            "minimum": 1.0,
+            "title": "Max File Bytes",
+            "type": "integer"
+          },
+          "max_scan_bytes": {
+            "maximum": 1073741824.0,
+            "minimum": 1.0,
+            "title": "Max Scan Bytes",
+            "type": "integer"
+          },
+          "version": {
+            "maxLength": 24,
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "database_sha256",
+          "database_version",
+          "database_built_at",
+          "max_file_bytes",
+          "max_scan_bytes"
+        ],
+        "title": "SecurityScanner",
+        "type": "object"
+      },
+      "SecuritySummary": {
+        "properties": {
+          "inspection_status": {
+            "enum": [
+              "pending",
+              "complete",
+              "incomplete"
+            ],
+            "title": "Inspection Status",
+            "type": "string"
+          },
+          "report_expired": {
+            "default": false,
+            "title": "Report Expired",
+            "type": "boolean"
+          },
+          "report_path": {
+            "title": "Report Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inspection_status",
+          "report_path"
+        ],
+        "title": "SecuritySummary",
         "type": "object"
       },
       "SourceUrl": {
@@ -4652,6 +5948,11 @@
           "filename": {
             "title": "Filename",
             "type": "string"
+          },
+          "security_inspection": {
+            "default": false,
+            "title": "Security Inspection",
+            "type": "boolean"
           }
         },
         "required": [
@@ -6284,6 +7585,235 @@
         ]
       }
     },
+    "/v1/jobs/{job_id}/security-bundle": {
+      "get": {
+        "operationId": "get_security_bundle_v1_jobs__job_id__security_bundle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ProductionApiKey": []
+          }
+        ],
+        "summary": "Get Security Bundle",
+        "tags": [
+          "App Routes"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/security-cancel": {
+      "post": {
+        "description": "Fences an owned inspection attempt and releases its reservation. Incomplete cancellation uses the existing FAILED lifecycle state. Ordinary transformation jobs are not handled by this endpoint.",
+        "operationId": "cancelSecurityInspection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityCancelResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ProductionApiKey": []
+          }
+        ],
+        "summary": "Cancel a security inspection",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/security-derivative": {
+      "get": {
+        "description": "Returns an owned, generation-bound attachment URL for an explicitly requested, re-encoded and independently reinspected derivative. Original bytes are never returned.",
+        "operationId": "getSecurityDerivative",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityDerivativeResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ProductionApiKey": []
+          }
+        ],
+        "summary": "Download an inspected image derivative",
+        "tags": [
+          "Media Analysis"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/security-report": {
+      "get": {
+        "description": "Returns owned pending or versioned evidence, including incomplete reports on failed jobs. Completion describes requested check coverage, not application acceptance or safety. No original media is exposed. Disabled by default.",
+        "operationId": "getSecurityReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ProductionApiKey": []
+          }
+        ],
+        "summary": "Get a media security assessment",
+        "tags": [
+          "Media Analysis"
+        ]
+      }
+    },
     "/v1/marketplace/packs": {
       "get": {
         "description": "Lists published MediaRuntime character packs and their separate download and hosted-runtime prices. No authentication is required.",
@@ -6853,6 +8383,63 @@
         "summary": "Create a sandbox session",
         "tags": [
           "Sandbox"
+        ]
+      }
+    },
+    "/v1/security/estimate": {
+      "post": {
+        "description": "Parser-free Standard/Premium quote against maximum input bytes and an approved versioned tariff. Actual received bytes determine final settlement. No automatic upgrade or free tier.",
+        "operationId": "estimateSecurityInspection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecurityOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionQuote"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ProductionApiKey": []
+          }
+        ],
+        "summary": "Quote bounded file inspection",
+        "tags": [
+          "Media Analysis"
         ]
       }
     },
@@ -7442,6 +9029,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Cache-Control": {
+                "description": "Runtime JSON is private and must not be stored in HTTP caches. Internal caches never bypass authorization or metering.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -7489,6 +9083,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Cache-Control": {
+                "description": "Runtime JSON is private and must not be stored in HTTP caches. Internal caches never bypass authorization or metering.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -7533,6 +9134,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Cache-Control": {
+                "description": "Runtime JSON is private and must not be stored in HTTP caches. Internal caches never bypass authorization or metering.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -7668,6 +9276,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Cache-Control": {
+                "description": "Runtime JSON is private and must not be stored in HTTP caches. Internal caches never bypass authorization or metering.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -7782,6 +9397,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Cache-Control": {
+                "description": "Runtime JSON is private and must not be stored in HTTP caches. Internal caches never bypass authorization or metering.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -7854,6 +9476,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Cache-Control": {
+                "description": "Runtime JSON is private and must not be stored in HTTP caches. Internal caches never bypass authorization or metering.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -7891,7 +9520,7 @@
     },
     "/v1/stickers/{sticker_id}/assets/{variant}": {
       "get": {
-        "description": "Authorizes historical-safe delivery and returns a short-lived generation-pinned URL for one approved WebP variant.",
+        "description": "Authorizes historical-safe delivery and returns a short-lived generation-pinned URL for an approved WebP or PNG variant. Treat the storage or CDN URL as opaque. Repeated requests may reuse a verified URL without extending its original expiry; expires_in_seconds reports its remaining lifetime. Every request still enforces access and usage policy.",
         "operationId": "resolveRuntimeStickerVariant",
         "parameters": [
           {
@@ -7936,6 +9565,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Cache-Control": {
+                "description": "Runtime JSON is private and must not be stored in HTTP caches. Internal caches never bypass authorization or metering.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
